@@ -32,6 +32,12 @@
             <version>3.5.9</version>
         </dependency>
 
+        <!-- jdk 8+ 引入可选模块 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
+        </dependency>
+
         <!-- 工具库: https://doc.hutool.cn/pages/index/#%F0%9F%93%A6%E5%AE%89%E8%A3%85  -->
         <dependency>
             <groupId>cn.hutool</groupId>
@@ -72,8 +78,19 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-bom</artifactId>
+                <version>3.5.9</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
+
+
     </dependencyManagement>
+
 
     <build>
         <plugins>
