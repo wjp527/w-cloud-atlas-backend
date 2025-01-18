@@ -32,7 +32,7 @@
             <version>3.5.9</version>
         </dependency>
 
-        <!-- jdk 8+ 引入可选模块 -->
+        <!-- mybatis-plus 分页插件 jdk 8+ 引入可选模块 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
@@ -79,6 +79,7 @@
                 <scope>import</scope>
             </dependency>
 
+            <!-- mybatis-plus 分页插件 -->
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-bom</artifactId>

@@ -137,6 +137,7 @@ public class UserController {
      * @return
      */
     @GetMapping("/get")
+    // 添加管理员权限
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<User> getUserById(long id) {
         if(id <= 0) {
@@ -160,17 +161,6 @@ public class UserController {
         BaseResponse<User> resposne = getUserById(id);
         User user = resposne.getData();
         return ResultUtils.success(userService.getUserVO(user));
-//        if (id <= 0) {
-//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
-//        }
-        
-//        // 根据id获取用户
-//        User user = new User();
-//        user.setId(id);
-//        UserVO userVO = userService.getUserVO(user);
-//        ThrowUtils.throwIf(userVO == null, ErrorCode.PARAMS_ERROR);
-//
-//        return ResultUtils.success(userVO);
     }
 
     /**
