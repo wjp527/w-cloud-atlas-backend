@@ -56,7 +56,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         ThrowUtils.throwIf(StrUtil.hasBlank(userAccount, userPassword, checkPassword),ErrorCode.PARAMS_ERROR, "参数为空");
         ThrowUtils.throwIf(userAccount.length()<3,ErrorCode.PARAMS_ERROR, "账号长度不能小于3位");
         ThrowUtils.throwIf(userPassword.length()<8||checkPassword.length()<8,ErrorCode.PARAMS_ERROR, "密码长度不能小于8位");
-        ThrowUtils.throwIf(userPassword.equals(checkPassword), ErrorCode.PARAMS_ERROR, "两次密码不一致");
+        ThrowUtils.throwIf(!userPassword.equals(checkPassword), ErrorCode.PARAMS_ERROR, "两次密码不一致");
 
         QueryWrapper queryWrapper = new QueryWrapper();
         queryWrapper.eq("userAccount", userAccount);
@@ -258,7 +258,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq(StrUtil.isNotBlank(userRole), "userRole", userRole);
         queryWrapper.like(StrUtil.isNotBlank(userName), "userName", userName);
         queryWrapper.like(StrUtil.isNotBlank(userAccount), "userAccount", userAccount);
-        queryWrapper.like(StrUtil.isNotBlank(userName), "userProfile", userProfile);
+        queryWrapper.like(StrUtil.isNotBlank(userProfile), "userProfile", userProfile);
         queryWrapper.orderBy(StrUtil.isNotBlank(sortField), sortOrder.equals("ascend"), sortField);
 
         return queryWrapper;

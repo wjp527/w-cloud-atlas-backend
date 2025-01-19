@@ -12,6 +12,11 @@ import java.util.Date;
 public class LoginUserVO {
 
     /**
+     * id
+     */
+    private Long id;
+
+    /**
      * 账号
      */
     private String userAccount;
