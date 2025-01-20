@@ -5,6 +5,7 @@ import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.GetObjectRequest;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.ciModel.persistence.PicOperations;
 import com.wjp.wcloudatlasbackend.config.CosClientConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -55,4 +56,35 @@ public class CosManager {
         return cosObject;
 
     }
+
+
+    /**
+     * 上传图片到 COS 对象存储【附带图片信息】 数据万象
+     * @param key
+     * @param file
+     * @return
+     */
+    public PutObjectResult putPictureObject(String key,File file) {
+        // 创建 PutObjectRequest 对象，设置存储桶名称、文件输入流、ObjectKey
+        PutObjectRequest putObjectRequest = new PutObjectRequest(cosClientConfig.getBucket(), key, file);
+        // 创建 PicOperations 对象，用于设置图片处理操作
+        PicOperations picOperations = new PicOperations();
+
+        // 设置是否返回图片信息
+        // 参数说明：
+        // - 1: 表示返回图片信息
+        // - 0: 表示不返回图片信息
+        picOperations.setIsPicInfo(1);
+
+        // 将图片处理操作设置到上传请求中
+        putObjectRequest.setPicOperations(picOperations);
+
+        // 调用 COS 客户端的 putObject 方法，执行上传操作
+        // 返回 PutObjectResult 对象，包含上传操作的结果信息
+        return cosClient.putObject(putObjectRequest);
+    }
+
+
+
+
 }
