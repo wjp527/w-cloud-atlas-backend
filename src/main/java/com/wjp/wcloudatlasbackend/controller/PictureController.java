@@ -236,7 +236,7 @@ public class PictureController {
         BeanUtil.copyProperties(pictureEditRequest, picture);
 
         // 注意将 list 转为 string
-        picture.setTags(JSONUtil.toJsonStr(picture.getTags()));
+        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
         // 设置编辑时间
         picture.setEditTime(new Date());
         // 数据校验
