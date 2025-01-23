@@ -15,12 +15,10 @@ import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.manager.CosManager;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureEditRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureQueryRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUpdateRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadRequest;
+import com.wjp.wcloudatlasbackend.model.dto.picture.*;
 import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
+import com.wjp.wcloudatlasbackend.model.enums.PictureReviewStatusEnum;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureTagCategory;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import com.wjp.wcloudatlasbackend.service.PictureService;
@@ -66,7 +64,7 @@ public class PictureController {
      * @return 图片信息
      */
     @PostMapping("/upload")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<PictureVO> uploadPicture(@RequestPart("file") MultipartFile multipartFile,
                                                  PictureUploadRequest pictureUploadRequest,
                                                  HttpServletResponse response,
@@ -126,6 +124,9 @@ public class PictureController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
 
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
         // 将实体类 和 DTO 进行转换
         Picture picture = new Picture();
         BeanUtil.copyProperties(pictureUpdateRequest, picture);
@@ -138,6 +139,9 @@ public class PictureController {
         Long id = pictureUpdateRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+
+        // 补充审核参数
+        pictureService.fillReviewParams(picture, loginUser);
 
         // 操作数据库
         boolean result = pictureService.updateById(picture);
@@ -212,6 +216,9 @@ public class PictureController {
         // 限制爬虫
        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
 
+       // ✨普通用户 只查找 审核通过的 数据
+       pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
        // 查询数据库
         // 根据 查询条件进行 分页
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
@@ -241,6 +248,10 @@ public class PictureController {
         picture.setEditTime(new Date());
         // 数据校验
         pictureService.validPicture(picture);
+
+        // 补充审核参数
+        pictureService.fillReviewParams(picture, loginUser);
+
         // 判断是否存在
         Long id = picture.getId();
         Picture oldPicture = pictureService.getById(id);
@@ -276,4 +287,28 @@ public class PictureController {
         return ResultUtils.success(pictureTagCategory);
     }
 
+
+    /**
+     * 图片审核(管理员可用)
+     * @param pictureReviewRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/review")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> doPictureReview(@RequestBody PictureReviewRequest pictureReviewRequest, HttpServletRequest request) {
+
+        ThrowUtils.throwIf(pictureReviewRequest == null , ErrorCode.PARAMS_ERROR, "参数为空");
+
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
+
+        pictureService.doPictureReview(pictureReviewRequest, loginUser);
+
+        return ResultUtils.success(true);
+
+
+
+    }
 }

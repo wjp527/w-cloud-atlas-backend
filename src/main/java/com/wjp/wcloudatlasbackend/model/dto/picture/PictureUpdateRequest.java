@@ -3,6 +3,7 @@ package com.wjp.wcloudatlasbackend.model.dto.picture;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -35,7 +36,6 @@ public class PictureUpdateRequest implements Serializable {
      * 标签（JSON 数组）
      */
     private List<String> tags;
-
 
     private static final long serialVersionUID = -4289982058773032480L;
 }
