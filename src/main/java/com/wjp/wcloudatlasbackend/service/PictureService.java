@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.wjp.wcloudatlasbackend.model.dto.picture.PictureQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.picture.PictureReviewRequest;
+import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadRequest;
 import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -12,6 +13,7 @@ import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author wjp
@@ -72,4 +74,27 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser
      */
     void fillReviewParams(Picture picture, User loginUser);
+
+
+    /**
+     * 批量抓取和创建图片
+     * @param pictureUploadByBatchRequest
+     * @param loginUser
+     * @return 成功创建的图片数
+     */
+    Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest,
+                                 User loginUser);
+
+
+    /**
+     * 百度图片批量抓取
+     * @return
+     */
+    Integer PictureBatchForBaiDu(String searchText, String namePrefix, String category, List<String> tags, Integer page, Integer count, User loginUser);
+
+    /**
+     * Bing图片批量抓取
+     * @return
+     */
+    Integer PictureBatchForBing(String searchText, String namePrefix, String category, List<String> tags,Integer page, Integer count, User loginUser);
 }
