@@ -12,6 +12,9 @@ import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.manager.FileManager;
+import com.wjp.wcloudatlasbackend.manager.upload.FilePictureUpload;
+import com.wjp.wcloudatlasbackend.manager.upload.PictureUploadTemplate;
+import com.wjp.wcloudatlasbackend.manager.upload.UrlPictureUpload;
 import com.wjp.wcloudatlasbackend.model.dto.file.UploadPictureResult;
 import com.wjp.wcloudatlasbackend.model.dto.picture.PictureQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.picture.PictureReviewRequest;
@@ -25,7 +28,6 @@ import com.wjp.wcloudatlasbackend.service.PictureService;
 import com.wjp.wcloudatlasbackend.mapper.PictureMapper;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -50,15 +52,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private UserService userService;
 
+    @Resource
+    private FilePictureUpload FilePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
+
     /**
      * 上传图片
-     * @param multipartFile
+     * @param inputSource
      * @param pictureUploadRequest
      * @param loginUser
      * @return 返回 PictureVO
      */
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         ThrowUtils.throwIf(loginUser == null , ErrorCode.NO_AUTH_ERROR);
         // 用于判断是否新增还是更新图片
         Long pictureId = null;
@@ -90,7 +98,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 上传图片，得到信息
         // 按照用户id，划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-        UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+
+        // 根据 inputSource 类型 区分上传方式
+        PictureUploadTemplate pictureUploadTemplate =  FilePictureUpload;
+        if(inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
 
         // 构造要入库的图片信息
         Picture picture = new Picture();

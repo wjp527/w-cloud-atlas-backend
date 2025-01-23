@@ -56,7 +56,7 @@ public class PictureController {
 
 
     /**
-     * 上传图片(可重新上传)
+     * 通过本地文件上传图片(可重新上传)
      * @param multipartFile 图片文件
      * @param pictureUploadRequest 图片上传请求
      * @param response 响应
@@ -71,6 +71,25 @@ public class PictureController {
                                                  HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile, pictureUploadRequest, loginUser);
+        return ResultUtils.success(pictureVO);
+
+    }
+
+    /**
+     * 通过 URL上传图片(可重新上传)
+     * @param pictureUploadRequest
+     * @param response
+     * @param request
+     * @return
+     */
+    @PostMapping("/upload/url")
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<PictureVO> uploadPictureByUrl(@RequestBody PictureUploadRequest pictureUploadRequest,
+                                                 HttpServletResponse response,
+                                                 HttpServletRequest request) {
+        String fileUrl = pictureUploadRequest.getFileUrl();
+        User loginUser = userService.getLoginUser(request);
+        PictureVO pictureVO = pictureService.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
         return ResultUtils.success(pictureVO);
 
     }
