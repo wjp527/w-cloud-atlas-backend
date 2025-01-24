@@ -1,5 +1,6 @@
 package com.wjp.wcloudatlasbackend.manager.upload;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
@@ -10,7 +11,9 @@ import cn.hutool.http.HttpStatus;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.http.Method;
 import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.ciModel.persistence.CIObject;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
+import com.qcloud.cos.model.ciModel.persistence.ProcessResults;
 import com.wjp.wcloudatlasbackend.config.CosClientConfig;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
@@ -84,11 +87,23 @@ public abstract class PictureUploadTemplate {
         try {
             // 创建临时文件
             file = File.createTempFile(uploadPath, null);
+            // 处理输入源文件，假设 processFile 方法对文件进行了某种处理，比如格式转换、优化等
             processFile(inputSource, file);
             // 上传图片
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
-            // 获取图片信息
+            // 获取上传图片的基本信息，获取原始图片的图像信息（如尺寸、格式等）
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
+            // 获取图片处理结果，假设处理操作会返回一个结果列表
+            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+            // 获取处理结果中的对象列表，如果列表不为空，则表示图片已成功处理
+            List<CIObject> objectList = processResults.getObjectList();
+            if(CollUtil.isNotEmpty(objectList)) {
+                // 获取压缩后的图片对象，这里假设列表的第一个元素是压缩后的图片
+                CIObject compressedObject = objectList.get(0);
+                // 封装压缩图，返回结果
+                return buildResult(originFilename, compressedObject);
+            }
+            // 如果没有处理过的图片（即没有压缩图），直接返回上传的原始图片信息
             return buildResult(originFilename, uploadPath, file, imageInfo);
         } catch(Exception e) {
             log.error("图片上传失败", e);
@@ -99,6 +114,24 @@ public abstract class PictureUploadTemplate {
         }
     }
 
+    private UploadPictureResult buildResult(String originFilename, CIObject compressedObject) {
+        // 封装返回结果
+        UploadPictureResult uploadPictureResult = new UploadPictureResult();
+        int picWidth = compressedObject.getWidth();
+        int picHeight = compressedObject.getHeight();
+        // 计算图片缩放比例
+        double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
+        // compressedObject.getKey(): 压缩图的路径
+        uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressedObject.getKey());
+        uploadPictureResult.setPicName(FileUtil.getName(originFilename));
+        uploadPictureResult.setPicSize(compressedObject.getSize().longValue());
+        uploadPictureResult.setPicWidth(picWidth);
+        uploadPictureResult.setPicHeight(picHeight);
+        uploadPictureResult.setPicScale(picScale);
+        uploadPictureResult.setPicFormat(compressedObject.getFormat());
+
+        return uploadPictureResult;
+    }
 
 
     /**
