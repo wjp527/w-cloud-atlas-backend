@@ -3,6 +3,7 @@ package com.wjp.wcloudatlasbackend.controller;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -18,6 +19,7 @@ import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.manager.CosManager;
+import com.wjp.wcloudatlasbackend.manager.PictureCacheManager;
 import com.wjp.wcloudatlasbackend.model.dto.picture.*;
 import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
@@ -43,6 +45,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -79,6 +82,10 @@ public class PictureController {
             // 定义过期时间
             .expireAfterWrite(Duration.ofMinutes(5))
             .build();
+
+
+    @Resource
+    private PictureCacheManager pictureCacheManager;
 
 
     /**
@@ -241,7 +248,7 @@ public class PictureController {
         // 查询数据库
         // 根据 查询条件进行 分页
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
-        
+
         return ResultUtils.success(picturePage);
 
     }
@@ -274,12 +281,59 @@ public class PictureController {
     }
 
     /**
-     * 多级 缓存 (Redis + Caffeine)
-     * 分页获取图片列表(封装类，有缓存) 【多条数据】
+     * 分页获取图片列表(封装类) 【多条数据】
+     * ✨使用 Caffeine + Redis 多级缓存 【目前最优解】
+     * 解决问题:
+     *  - 缓存雪崩
+     *  - 缓存击穿
+     *  - 缓存穿透
      * @param pictureQueryRequest
      * @param request
      * @return
      */
+    @PostMapping("/list/page/vo/cache/manager")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCacheManager(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        Page<PictureVO> pagePictureCache = pictureCacheManager.getPagePictureCache(pictureQueryRequest, request);
+        return ResultUtils.success(pagePictureCache);
+    }
+
+    /**
+     * 测试缓存雪崩
+     * @param request
+     * @return
+     */
+    @GetMapping("/cache/avalanche")
+    public BaseResponse<Boolean> CacheAvalanche(HttpServletRequest request) throws InterruptedException {
+        int threadCount = 50;  // 模拟50个并发请求
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            new Thread(() -> {
+                try {
+                    PictureQueryRequest pictureQueryRequest = new PictureQueryRequest();
+                    // 设置查询条件
+                    pictureQueryRequest.setCurrent(1);
+                    pictureQueryRequest.setPageSize(10);
+
+                    pictureCacheManager.getPagePictureCache(pictureQueryRequest,request);  // 触发缓存查询
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        latch.await();  // 等待所有线程完成
+
+        return ResultUtils.success(true);
+    }
+
+        /**
+         * 多级 缓存 (Redis + Caffeine)
+         * 分页获取图片列表(封装类，有缓存) 【多条数据】
+         * @param pictureQueryRequest
+         * @param request
+         * @return
+         */
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
         int current = pictureQueryRequest.getCurrent();

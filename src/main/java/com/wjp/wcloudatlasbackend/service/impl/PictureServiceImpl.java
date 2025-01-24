@@ -311,7 +311,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         return queryWrapper;
     }
 
-
     /**
      * 图片参数校验
      * @param picture
