@@ -139,8 +139,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if(pictureUploadRequest.getTags()!=null) {
             picture.setTags(pictureUploadRequest.getTags());
         }
-        if(picture.getCategory()!=null) {
-            picture.setCategory(picture.getCategory());
+        if(pictureUploadRequest.getCategory()!=null) {
+            picture.setCategory(pictureUploadRequest.getCategory());
         }
 
         picture.setUserId(loginUser.getId());
