@@ -1,8 +1,11 @@
 package com.wjp.wcloudatlasbackend.controller;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
@@ -24,6 +27,9 @@ import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import com.wjp.wcloudatlasbackend.service.PictureService;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,9 +39,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 图片接口
@@ -53,6 +61,24 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+    /**
+     * 引入 Redis 操作对象
+     */
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * 构造本地缓存 (Caffeine)
+     */
+    private final Cache<String, String> LOCAL_CACHE = Caffeine.newBuilder()
+            // 定义初始容量
+            .initialCapacity(1024)
+            // 定义最大容量
+            .maximumSize(10_000)
+            // 定义过期时间
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .build();
 
 
     /**
@@ -243,6 +269,180 @@ public class PictureController {
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         // 封装成 VO
         Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+
+        return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
+     * 多级 缓存 (Redis + Caffeine)
+     * 分页获取图片列表(封装类，有缓存) 【多条数据】
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        int current = pictureQueryRequest.getCurrent();
+        int pageSize = pictureQueryRequest.getPageSize();
+
+        // 限制爬虫
+        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
+
+        // ✨普通用户 只查找 审核通过的 数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+
+        // 构建缓存 key
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        // 将获取到的 请求参数 转换成 字符串，并且进行 md5 加密，作为缓存的 key
+        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
+        // caffeine key
+        String caffeineKey = String.format("listPictureVOByPage:%s", hashKey);
+        // 整合 redis key
+        String redisKey = String.format("wCloudAtlas:listPictureVOByPage:%s", hashKey);
+
+        // Caffeine 本地缓存
+        // 根据 caffeine key 获取 缓存数据
+        String cachedValue = LOCAL_CACHE.getIfPresent(caffeineKey);
+        // 本地缓存有值
+        if(cachedValue != null) {
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+
+            return ResultUtils.success(cachedPage);
+        }
+
+        // Redis 缓存
+        // 查询缓存，缓存中有，就直接取出，如果没有则查询数据库，并写入缓存中
+        // 获取 redis 操作对象
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        // 根据 redis key 获取 缓存数据
+        cachedValue = opsForValue.get(redisKey);
+
+        // 有缓存
+        if(cachedValue != null) {
+            // 缓存数据转换成 Page 对象
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachedPage);
+        }
+
+        // 如果 本地缓存 和 Redis 都没有命中缓存
+        // 查询数据库
+        // 根据 查询条件进行 分页
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
+        // 封装成 VO
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 没有缓存，查询数据库，并写入缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // 存入缓存
+        // Caffeine 存入本地缓存
+        LOCAL_CACHE.put(caffeineKey, cacheValue);
+
+        // Redis 存入 Redis 缓存
+        // 设置过期时间, 5-10分钟，随机的，防止雪崩
+        int cacheExpireTime = 300 + RandomUtil.randomInt(0, 300);
+        opsForValue.set(redisKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
+
+        return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
+     * Redis 缓存
+     * 分页获取图片列表(封装类，有缓存) 【多条数据】
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/list/page/vo/redis")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithRedis(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        int current = pictureQueryRequest.getCurrent();
+        int pageSize = pictureQueryRequest.getPageSize();
+
+        // 限制爬虫
+        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
+
+        // ✨普通用户 只查找 审核通过的 数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        // 姜获取到的 请求参数 转换成 字符串，并且进行 md5 加密，作为缓存的 key
+        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
+        // 整合 redis key
+        String redisKey = String.format("wCloudAtlas:listPictureVOByPage:%s", hashKey);
+
+        // 查询缓存，缓存中有，就直接取出，如果没有则查询数据库，并写入缓存中
+        // 获取 redis 操作对象
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        // 根据 redis key 获取 缓存数据
+        String cachedValue = opsForValue.get(redisKey);
+
+        // 有缓存
+        if(cachedValue != null) {
+            // 缓存数据转换成 Page 对象
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachedPage);
+        }
+
+        // 查询数据库
+        // 根据 查询条件进行 分页
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
+        // 封装成 VO
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 没有缓存，查询数据库，并写入缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // 设置过期时间, 5-10分钟，随机的，防止雪崩
+        int cacheExpireTime = 300 + RandomUtil.randomInt(0, 300);
+        // 存入缓存
+        opsForValue.set(redisKey, cacheValue, cacheExpireTime, TimeUnit.SECONDS);
+
+        return ResultUtils.success(pictureVOPage);
+    }
+
+    /**
+     * Caffeine 本地缓存
+     * 分页获取图片列表(封装类，有缓存) 【多条数据】
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/list/page/vo/caffeine")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCaffeine(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+        int current = pictureQueryRequest.getCurrent();
+        int pageSize = pictureQueryRequest.getPageSize();
+
+        // 限制爬虫
+        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
+
+        // ✨普通用户 只查找 审核通过的 数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        // 姜获取到的 请求参数 转换成 字符串，并且进行 md5 加密，作为缓存的 key
+        String hashKey = DigestUtils.md5DigestAsHex(queryCondition.getBytes());
+        // 整合 redis key
+        String cacheKey = String.format("listPictureVOByPage:%s", hashKey);
+
+        // 查询缓存，缓存中有，就直接取出，如果没有则查询数据库，并写入缓存中
+        // 根据 caffeine key 获取 缓存数据
+        String cachedValue = LOCAL_CACHE.getIfPresent(cacheKey);
+
+        // 有缓存
+        if(cachedValue != null) {
+            // 缓存数据转换成 Page 对象
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachedPage);
+        }
+
+        // 查询数据库
+        // 根据 查询条件进行 分页
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
+        // 封装成 VO
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        // 没有缓存，查询数据库，并写入缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        // 存入缓存
+        LOCAL_CACHE.put(cacheKey, cacheValue);
 
         return ResultUtils.success(pictureVOPage);
     }

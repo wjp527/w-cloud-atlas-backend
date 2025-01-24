@@ -38,6 +38,22 @@
             <artifactId>mybatis-plus-jsqlparser-4.9</artifactId>
         </dependency>
 
+
+        <!-- Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- 注意 spring boot2 不能用 caffeine 3，只能用2的版本 -->
+        <!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>3.1.8</version>
+        </dependency>
+
+
         <!-- 工具库: https://doc.hutool.cn/pages/index/#%F0%9F%93%A6%E5%AE%89%E8%A3%85  -->
         <dependency>
             <groupId>cn.hutool</groupId>
