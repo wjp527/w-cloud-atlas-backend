@@ -136,31 +136,45 @@ public class PictureController {
     @PostMapping("/delete")
     public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         // 校验参数
-        if(deleteRequest == null || deleteRequest.getId() == null) {
+        if(deleteRequest == null || (deleteRequest.getId() == null && deleteRequest.getIds() == null )) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
         }
 
         User loginUser = userService.getLoginUser(request);
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
 
-        // 图片id
+        // 单个图片id
         String id = deleteRequest.getId();
-        Picture oldPicture = pictureService.getById(id);
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 
-        // 仅本人和管理员可删除
-        Long userId = loginUser.getId();
-        if(!oldPicture.getUserId().equals(userId) || !userService.isAdmin(loginUser)) {
-            throw  new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权删除");
+
+        // 批量图片id
+        List<String> ids = deleteRequest.getIds();
+
+        boolean result ;
+
+        if(id != null) {
+            Picture oldPicture = pictureService.getById(id);
+            ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+            // 操作数据库
+            result = pictureService.removeById(id);
+            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "删除失败");
+            // 仅本人和管理员可删除
+            Long userId = loginUser.getId();
+            if(!oldPicture.getUserId().equals(userId) || !userService.isAdmin(loginUser)) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权删除");
+            }
+            // 删除 cos 中的图片
+            pictureService.clearPictureFile(oldPicture);
+        } else if(ids != null) {
+            // 批量删除
+            pictureService.removeByIds(ids);
         }
-
-        // 操作数据库
-        boolean result = pictureService.removeById(id);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "删除失败");
 
         return ResultUtils.success(true);
 
     }
+
+
 
     /**
      * 更新图片信息（仅管理员可用）

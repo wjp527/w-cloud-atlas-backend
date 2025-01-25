@@ -11,10 +11,12 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
+import com.wjp.wcloudatlasbackend.manager.CosManager;
 import com.wjp.wcloudatlasbackend.manager.FileManager;
 import com.wjp.wcloudatlasbackend.manager.upload.FilePictureUpload;
 import com.wjp.wcloudatlasbackend.manager.upload.PictureUploadTemplate;
@@ -38,11 +40,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +75,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private UrlPictureUpload urlPictureUpload;
+
+    @Resource
+    private CosManager cosManage;
 
     /**
      * 上传图片
@@ -159,6 +167,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         boolean result = this.saveOrUpdate(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
+
+        // todo 如果是更新，可清理cos中的图片资源
+        if(pictureId != null) {
+            this.clearPictureFile(picture);
+        }
 
         return PictureVO.objToVo(picture);
 
@@ -594,6 +607,45 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         return uploadCount;
     }
+
+    /**
+     * 清理 cos 中的图片文件
+     * @param oldPicture
+     */
+    @Async // 异步调用, ✨ 记得在 启动文件中 开启@EnableAsync注解
+    @Override
+    public void clearPictureFile(Picture oldPicture) {
+        // 判断该图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        // 计算 图片被使用次数
+        long count = this.lambdaQuery()
+                .eq(Picture::getUrl, pictureUrl)
+                .count();
+
+        if(count > 1) {
+            return ; // 图片被多条记录使用，不删除
+        }
+
+      try {
+          // 删除图片
+          String picturePath = new URL(pictureUrl).getPath();
+          cosManage.deleteObject(picturePath);
+
+          // 缩略图
+          String thumbnailUrl = oldPicture.getThumbnailUrl();
+          if(StrUtil.isNotBlank(thumbnailUrl)) {
+              // 删除缩略图
+              String thumbnailPath = new URL(thumbnailUrl).getPath();
+              cosManage.deleteObject(thumbnailPath);
+          }
+      } catch(MalformedURLException e) {
+          log.error("图片地址错误：{}", pictureUrl);
+          throw new BusinessException(ErrorCode.PARAMS_ERROR, "图片地址错误");
+      }
+
+    }
+
+
 
 }
 

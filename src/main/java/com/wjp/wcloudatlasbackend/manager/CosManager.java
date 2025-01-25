@@ -2,10 +2,7 @@ package com.wjp.wcloudatlasbackend.manager;
 
 import cn.hutool.core.io.FileUtil;
 import com.qcloud.cos.COSClient;
-import com.qcloud.cos.model.COSObject;
-import com.qcloud.cos.model.GetObjectRequest;
-import com.qcloud.cos.model.PutObjectRequest;
-import com.qcloud.cos.model.PutObjectResult;
+import com.qcloud.cos.model.*;
 import com.qcloud.cos.model.ciModel.persistence.PicOperations;
 import com.wjp.wcloudatlasbackend.config.CosClientConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -121,6 +118,15 @@ public class CosManager {
         // 调用 COS 客户端的 putObject 方法，执行上传操作
         // 返回 PutObjectResult 对象，包含上传操作的结果信息
         return cosClient.putObject(putObjectRequest);
+    }
+
+
+    /**
+     * 删除 COS 对象存储的文件
+     * @param key 要删除的文件路径
+     */
+    public void deleteObject(String key) {
+        cosClient.deleteObject(cosClientConfig.getBucket(), key);
     }
 
 

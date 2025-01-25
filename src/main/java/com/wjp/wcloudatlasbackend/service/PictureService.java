@@ -97,4 +97,13 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     Integer PictureBatchForBing(String searchText, String namePrefix, String category, List<String> tags,Integer page, Integer count, User loginUser);
+
+
+    /**
+     * 清理 cos 中的图片文件
+     * @param oldPicture
+     */
+    void clearPictureFile(Picture oldPicture);
+
+
 }
