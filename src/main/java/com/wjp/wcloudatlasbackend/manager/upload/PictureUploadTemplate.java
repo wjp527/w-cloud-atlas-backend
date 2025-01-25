@@ -100,8 +100,15 @@ public abstract class PictureUploadTemplate {
             if(CollUtil.isNotEmpty(objectList)) {
                 // 获取压缩后的图片对象，这里假设列表的第一个元素是压缩后的图片
                 CIObject compressedObject = objectList.get(0);
+                // 缩略图默认就是压缩图
+                CIObject thubmnailObject = compressedObject;
+                if(objectList.size() > 1) {
+                    // 获取缩略图对象，这里假设列表的第二个元素是缩略图
+                    thubmnailObject = objectList.get(1);
+                }
                 // 封装压缩图，返回结果
-                return buildResult(originFilename, compressedObject);
+                return buildResult(originFilename, compressedObject, thubmnailObject);
+
             }
             // 如果没有处理过的图片（即没有压缩图），直接返回上传的原始图片信息
             return buildResult(originFilename, uploadPath, file, imageInfo);
@@ -114,14 +121,21 @@ public abstract class PictureUploadTemplate {
         }
     }
 
-    private UploadPictureResult buildResult(String originFilename, CIObject compressedObject) {
+    /**
+     * 构建返回结果
+     * @param originFilename 原始文件名
+     * @param compressedObject 压缩图对象
+     * @param thubmnailObject 缩略图对象
+     * @return
+     */
+    private UploadPictureResult buildResult(String originFilename, CIObject compressedObject, CIObject thubmnailObject) {
         // 封装返回结果
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         int picWidth = compressedObject.getWidth();
         int picHeight = compressedObject.getHeight();
         // 计算图片缩放比例
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
-        // compressedObject.getKey(): 压缩图的路径
+        // 设置为压缩后的原图地址 (更改为 .webp 格式)
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressedObject.getKey());
         uploadPictureResult.setPicName(FileUtil.getName(originFilename));
         uploadPictureResult.setPicSize(compressedObject.getSize().longValue());
@@ -129,6 +143,8 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(compressedObject.getFormat());
+        // 设置缩略图路径
+        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" +thubmnailObject.getKey());
 
         return uploadPictureResult;
     }

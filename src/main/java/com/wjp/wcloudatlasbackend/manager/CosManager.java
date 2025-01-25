@@ -84,7 +84,7 @@ public class CosManager {
 
         // 图片处理规则列表，存储具体的图片处理操作规则
         List<PicOperations.Rule> rules = new ArrayList<>();
-        // 图片压缩 (转成 webp 格式)
+        // 1.图片压缩 (转成 webp 格式)
         // 使用 FileUtil.mainName(key) 获取文件名（不带扩展名），并加上 ".webp" 后缀，形成压缩后的文件名
         String webpKey = FileUtil.mainName(key) + ".webp";
         // 创建一个图片处理规则，用于定义图片转换的具体操作
@@ -100,6 +100,24 @@ public class CosManager {
         rules.add(compressRule);
         // 设置图片处理操作规则列表到 PicOperations 对象中
         picOperations.setRules(rules);
+
+        // 2. 对缩略图处理，仅对 > 20KB 的图片生成缩略图
+        if(file.length() > 2 * 1024) {
+            // 缩略图处理
+            PicOperations.Rule thumbnailRule = new PicOperations.Rule();
+            // 设置缩略图处理后的文件名（包括后缀）
+            String thumbnailKey = FileUtil.mainName(key) + "_thumbnail." + FileUtil.getSuffix(key);
+            thumbnailRule.setFileId(thumbnailKey);
+            // 设置存储桶
+            thumbnailRule.setBucket(cosClientConfig.getBucket());
+            // /thumbnail/<Width>x<Height>>: 如果大于原图宽高，则不处理
+            thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
+            rules.add(thumbnailRule);
+
+        }
+
+
+
         // 调用 COS 客户端的 putObject 方法，执行上传操作
         // 返回 PutObjectResult 对象，包含上传操作的结果信息
         return cosClient.putObject(putObjectRequest);
