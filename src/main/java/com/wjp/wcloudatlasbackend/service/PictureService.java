@@ -2,10 +2,7 @@ package com.wjp.wcloudatlasbackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureQueryRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureReviewRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadRequest;
+import com.wjp.wcloudatlasbackend.model.dto.picture.*;
 import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
@@ -106,4 +103,25 @@ public interface PictureService extends IService<Picture> {
     void clearPictureFile(Picture oldPicture);
 
 
+    /**
+     * 删除图片
+     * @param pictureId
+     * @param pictureIds
+     * @param loginUser
+     */
+    void deletePicture(String pictureId, List<String> pictureIds,User loginUser);
+
+    /**
+     * 编辑图片信息
+     * @param pictureEditRequest 编辑请求
+     * @param loginUser 登录用户
+     */
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+    /**
+     * 校验空间图片的权限
+     * @param loginUser 登录用户
+     * @param picture 图片
+     */
+    void checkPictureAuth(User loginUser, Picture picture);
 }

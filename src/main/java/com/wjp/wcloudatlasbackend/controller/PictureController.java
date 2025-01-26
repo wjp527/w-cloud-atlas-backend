@@ -21,12 +21,16 @@ import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.manager.CosManager;
 import com.wjp.wcloudatlasbackend.manager.PictureCacheManager;
 import com.wjp.wcloudatlasbackend.model.dto.picture.*;
+import com.wjp.wcloudatlasbackend.model.dto.space.SpaceLevel;
 import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
+import com.wjp.wcloudatlasbackend.model.entity.domain.Space;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
 import com.wjp.wcloudatlasbackend.model.enums.PictureReviewStatusEnum;
+import com.wjp.wcloudatlasbackend.model.enums.SpaceLevelEnum;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureTagCategory;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import com.wjp.wcloudatlasbackend.service.PictureService;
+import com.wjp.wcloudatlasbackend.service.SpaceService;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -47,6 +51,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 图片接口
@@ -86,6 +92,9 @@ public class PictureController {
 
     @Resource
     private PictureCacheManager pictureCacheManager;
+
+    @Resource
+    private SpaceService spaceService;
 
 
     /**
@@ -142,33 +151,13 @@ public class PictureController {
 
         User loginUser = userService.getLoginUser(request);
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
-
         // 单个图片id
-        String id = deleteRequest.getId();
-
+        String pictureId = deleteRequest.getId();
 
         // 批量图片id
-        List<String> ids = deleteRequest.getIds();
-
-        boolean result ;
-
-        if(id != null) {
-            Picture oldPicture = pictureService.getById(id);
-            ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-            // 操作数据库
-            result = pictureService.removeById(id);
-            ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "删除失败");
-            // 仅本人和管理员可删除
-            Long userId = loginUser.getId();
-            if(!oldPicture.getUserId().equals(userId) || !userService.isAdmin(loginUser)) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权删除");
-            }
-            // 删除 cos 中的图片
-            pictureService.clearPictureFile(oldPicture);
-        } else if(ids != null) {
-            // 批量删除
-            pictureService.removeByIds(ids);
-        }
+        List<String> pictureIds = deleteRequest.getIds();
+        // 删除图片
+        pictureService.deletePicture(pictureId, pictureIds, loginUser);
 
         return ResultUtils.success(true);
 
@@ -243,6 +232,15 @@ public class PictureController {
         // 查询数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+
+
+        // 空间权限校验
+        Long spaceId = picture.getSpaceId();
+        if(spaceId != null) {
+            User loginUser = userService.getLoginUser(request);
+            pictureService.checkPictureAuth(loginUser, picture);
+        }
+
         PictureVO pictureVO = pictureService.getPictureVO(picture, request);
         return ResultUtils.success(pictureVO);
     }
@@ -282,14 +280,30 @@ public class PictureController {
         // 限制爬虫
        ThrowUtils.throwIf(pageSize > 20, ErrorCode.PARAMS_ERROR);
 
-       // ✨普通用户 只查找 审核通过的 数据
-       pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if(spaceId == null) {
+            // 公开图库
+            // ✨普通用户 只查找 审核通过的 数据
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setNullSpaceId(true);
+        } else {
+            // 私有空间
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null ,   ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            if(!loginUser.getId().equals(space.getUserId())) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间权限");
+            }
+        }
 
        // 查询数据库
         // 根据 查询条件进行 分页
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         // 封装成 VO
         Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+
+
 
         return ResultUtils.success(pictureVOPage);
     }
@@ -307,6 +321,23 @@ public class PictureController {
      */
     @PostMapping("/list/page/vo/cache/manager")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCacheManager(@RequestBody PictureQueryRequest pictureQueryRequest, HttpServletRequest request) {
+
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if(spaceId == null) {
+            // 公开图库
+            // ✨普通用户 只查找 审核通过的 数据
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            pictureQueryRequest.setNullSpaceId(true);
+        } else {
+            // 私有空间
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIf(space == null ,   ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            if(!loginUser.getId().equals(space.getUserId())) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有空间权限");
+            }
+        }
+
         Page<PictureVO> pagePictureCache = pictureCacheManager.getPagePictureCache(pictureQueryRequest, request);
         return ResultUtils.success(pagePictureCache);
     }
@@ -525,33 +556,9 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         Long userId = loginUser.getId();
         ThrowUtils.throwIf(userId == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
-        // 在此处将实体类 和 DTO 进行转换
-        Picture picture = new Picture();
-        BeanUtil.copyProperties(pictureEditRequest, picture);
 
-        // 注意将 list 转为 string
-        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
-        // 设置编辑时间
-        picture.setEditTime(new Date());
-        // 数据校验
-        pictureService.validPicture(picture);
-
-        // 补充审核参数
-        pictureService.fillReviewParams(picture, loginUser);
-
-        // 判断是否存在
-        Long id = picture.getId();
-        Picture oldPicture = pictureService.getById(id);
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-
-        // 仅本人或管理员可以编辑
-        if(!oldPicture.getUserId().equals(userId) && !userService.isAdmin(loginUser)) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权编辑");
-        }
-
-        // 操作数据库
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIf(!result, ErrorCode.PARAMS_ERROR, "编辑失败");
+        // 编辑图片信息
+        pictureService.editPicture(pictureEditRequest, loginUser);
 
         return ResultUtils.success(true);
 
@@ -610,6 +617,24 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         Integer uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
         return ResultUtils.success(uploadCount);
+    }
+
+
+    /**
+     * 获取空间等级列表
+     * @return
+     */
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values())
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()
+                )).collect(Collectors.toList());
+
+        return ResultUtils.success(spaceLevelList);
     }
 
 }
