@@ -60,9 +60,10 @@ public class CosManager {
 
     /**
      * 上传图片到 COS 对象存储【附带图片信息】 数据万象
-     * @param key
-     * @param file
-     * @return
+     * @param key 文件要存储到存储桶的位置 【唯一键】
+     * @param file 文件对象
+     * @return  上传结果
+     * 数据万象处理图片文档: https://cloud.tencent.com/document/product/436/55377
      */
     public PutObjectResult putPictureObject(String key,File file) {
         // 创建 PutObjectRequest 对象，设置存储桶名称、文件输入流、ObjectKey
@@ -110,11 +111,7 @@ public class CosManager {
             // /thumbnail/<Width>x<Height>>: 如果大于原图宽高，则不处理
             thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
             rules.add(thumbnailRule);
-
         }
-
-
-
         // 调用 COS 客户端的 putObject 方法，执行上传操作
         // 返回 PutObjectResult 对象，包含上传操作的结果信息
         return cosClient.putObject(putObjectRequest);

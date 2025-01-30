@@ -69,7 +69,7 @@ public abstract class PictureUploadTemplate {
     /**
      * 上传图片
      * @param inputSource 图片文件
-     * @param uploadPathPrefix 上传路径前缀
+     * @param uploadPathPrefix 上传路径前缀 [/public/用户id]
      * @return 返回 图片的详细信息 包括 图片的URL、名称、大小、宽度、高度、缩放比例、格式
      */
     public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix) {
@@ -81,7 +81,10 @@ public abstract class PictureUploadTemplate {
         String originFilename = getOriginFilename(inputSource);
         // 文件名: 日期_uuid.后缀
         String uploadFilename = String.format("%s_%s.%s", DateUtil.formatDate(new Date()), uuid, FileUtil.getSuffix(originFilename));
-        String uploadPath = String .format("/%s/%s", uploadPathPrefix, uploadFilename);
+        // uploadPathPrefix: /public/用户id
+        // uploadFilenameL 文件名: 日期_uuid.后缀
+        // uploadPath: 图片要在存储桶中的路径
+        String uploadPath = String.format("/%s/%s", uploadPathPrefix, uploadFilename);
         File file = null;
 
         try {
@@ -136,6 +139,7 @@ public abstract class PictureUploadTemplate {
         // 计算图片缩放比例
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
         // 设置为压缩后的原图地址 (更改为 .webp 格式)
+        // compressedObject.getKey() 中的这个 key 其实就是 cosManager.putPictureObject(uploadPath, file); 将uploadPath作为key上传到cos的返回值
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressedObject.getKey());
         uploadPictureResult.setPicName(FileUtil.getName(originFilename));
         uploadPictureResult.setPicSize(compressedObject.getSize().longValue());
@@ -152,11 +156,11 @@ public abstract class PictureUploadTemplate {
 
     /**
      * 构建返回结果
-     * @param originFilename
-     * @param uploadPath
-     * @param file
-     * @param imageInfo
-     * @return
+     * @param originFilename 原始文件名
+     * @param uploadPath 上传路径
+     * @param file 临时文件
+     * @param imageInfo 图片基本信息
+     * @return  返回 图片的详细信息 包括 图片的URL、名称、大小、宽度、高度、缩放比例、格式
      */
     private UploadPictureResult buildResult(String originFilename, String uploadPath, File file, ImageInfo imageInfo) {
         // 封装返回结果

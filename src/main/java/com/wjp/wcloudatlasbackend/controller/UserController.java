@@ -158,8 +158,8 @@ public class UserController {
      */
     @GetMapping("/get/vo")
     public BaseResponse<UserVO> getUserVOById(long id) {
-        BaseResponse<User> resposne = getUserById(id);
-        User user = resposne.getData();
+        BaseResponse<User> response = getUserById(id);
+        User user = response.getData();
         return ResultUtils.success(userService.getUserVO(user));
     }
 
@@ -186,7 +186,7 @@ public class UserController {
 
     /**
      * 更新用户 (仅管理员)
-     * @param userUpdateRequest
+     * @param userUpdateRequest 更新用户请求
      * @return
      */
     @PostMapping("/update")
@@ -210,7 +210,7 @@ public class UserController {
 
     /**
      * 分页查询用户 (仅管理员)
-     * @param userQueryRequest
+     * @param userQueryRequest 分页查询参数
      * @return
      */
     @PostMapping("/list/page/vo")

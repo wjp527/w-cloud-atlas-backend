@@ -202,9 +202,15 @@ public class PictureController {
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "更新失败");
 
-        return ResultUtils.success(result);
+        return ResultUtils.success(true);
     }
 
+    /**
+     * 获取图片信息
+     * @param id
+     * @param request
+     * @return
+     */
     @GetMapping("/get")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Picture> getPictureById(long id, HttpServletRequest request) {
@@ -297,7 +303,7 @@ public class PictureController {
             }
         }
 
-       // 查询数据库
+        // 查询数据库
         // 根据 查询条件进行 分页
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize), pictureService.getQueryWrapper(pictureQueryRequest));
         // 封装成 VO
@@ -546,6 +552,12 @@ public class PictureController {
         return ResultUtils.success(pictureVOPage);
     }
 
+    /**
+     * 编辑图片信息（普通用户）
+     * @param pictureEditRequest
+     * @param request
+     * @return
+     */
     @PostMapping("/edit")
     public BaseResponse<Boolean> editPicture(@RequestBody PictureEditRequest pictureEditRequest, HttpServletRequest request) {
 
@@ -597,7 +609,7 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
 
-
+        // 图片审核
         pictureService.doPictureReview(pictureReviewRequest, loginUser);
 
         return ResultUtils.success(true);

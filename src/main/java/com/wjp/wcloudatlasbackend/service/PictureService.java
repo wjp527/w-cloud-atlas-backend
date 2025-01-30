@@ -21,10 +21,10 @@ public interface PictureService extends IService<Picture> {
 
     /**
      * 上传图片
-     * @param inputSource
-     * @param pictureUploadRequest
-     * @param loginUser
-     * @return
+     * @param inputSource 传递文件的方式 【文件传输、url路径输入】
+     * @param pictureUploadRequest 上传请求
+     * @param loginUser 登录用户
+     * @return 上传成功的图片信息
      */
     PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser);
 

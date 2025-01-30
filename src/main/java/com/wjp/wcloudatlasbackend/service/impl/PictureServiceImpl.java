@@ -91,9 +91,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     /**
      * 上传图片
-     * @param inputSource
-     * @param pictureUploadRequest
-     * @param loginUser
+     * @param inputSource 图片来源【文件传输 / URL路径】
+     * @param pictureUploadRequest  图片上传请求参数
+     * @param loginUser 登录用户
      * @return 返回 PictureVO
      */
     @Override
@@ -182,6 +182,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             pictureUploadTemplate = urlPictureUpload;
         }
 
+        // 上传图片
         UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
 
         // 构造要入库的图片信息
