@@ -756,18 +756,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 
 
+
             // 开启事务
             transactionTemplate.execute(status -> {
                 // 操作数据库
                 boolean deleteResult = this.removeById(pictureId);
                 ThrowUtils.throwIf(!deleteResult, ErrorCode.OPERATION_ERROR, "删除失败");
                 // 更新空间的使用额度
-                boolean update = spaceService.lambdaUpdate()
-                        .eq(Space::getId, oldPicture.getSpaceId())
-                        .setSql("totalSize = totalSize - " + oldPicture.getPicSize())
-                        .setSql("totalCount = totalCount - 1")
-                        .update();
-                ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+                if(oldPicture.getSpaceId() != null) {
+                    boolean update = spaceService.lambdaUpdate()
+                            .eq(Space::getId, oldPicture.getSpaceId())
+                            .setSql("totalSize = totalSize - " + oldPicture.getPicSize())
+                            .setSql("totalCount = totalCount - 1")
+                            .update();
+                    ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+                }
                 return true;
             });
 
