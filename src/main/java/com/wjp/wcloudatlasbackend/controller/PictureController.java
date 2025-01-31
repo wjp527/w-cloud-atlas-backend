@@ -2,6 +2,7 @@ package com.wjp.wcloudatlasbackend.controller;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -31,6 +32,7 @@ import com.wjp.wcloudatlasbackend.model.enums.PictureReviewStatusEnum;
 import com.wjp.wcloudatlasbackend.model.enums.SpaceLevelEnum;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureTagCategory;
 import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
+import com.wjp.wcloudatlasbackend.model.vo.picture.SearchPictureByColorRequest;
 import com.wjp.wcloudatlasbackend.service.PictureService;
 import com.wjp.wcloudatlasbackend.service.SpaceService;
 import com.wjp.wcloudatlasbackend.service.UserService;
@@ -667,6 +669,26 @@ public class PictureController {
         // 调用图搜图接口
         List<ImageSearchResult> imageSearchResults = ImageSearchApiFacade.searchImage(picture.getThumbnailUrl());
         return ResultUtils.success(imageSearchResults);
+    }
+
+
+    /**
+     * 根据 图片的主色调 进行搜索图片
+     * @param searchPictureByColorRequest 图片的主色调
+     * @param request 请求
+     * @return 图片列表
+     */
+    @PostMapping("/search/color")
+    public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearchPictureByColorRequest searchPictureByColorRequest, HttpServletRequest request) {
+        // 校验参数
+        ThrowUtils.throwIf(searchPictureByColorRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+        User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+        String picColor = searchPictureByColorRequest.getPicColor();
+        Long spaceId = searchPictureByColorRequest.getSpaceId();
+        ThrowUtils.throwIf(StrUtil.isBlank(picColor) || spaceId == null, ErrorCode.PARAMS_ERROR, "参数错误");
+        List<PictureVO> pictureVOList = pictureService.searchPictureByColor(spaceId, picColor, loginUser);
+        return ResultUtils.success(pictureVOList);
     }
 
 

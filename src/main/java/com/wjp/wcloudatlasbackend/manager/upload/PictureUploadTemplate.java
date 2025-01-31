@@ -104,13 +104,13 @@ public abstract class PictureUploadTemplate {
                 // 获取压缩后的图片对象，这里假设列表的第一个元素是压缩后的图片
                 CIObject compressedObject = objectList.get(0);
                 // 缩略图默认就是压缩图
-                CIObject thubmnailObject = compressedObject;
+                CIObject thumbnailCiObject = compressedObject;
                 if(objectList.size() > 1) {
                     // 获取缩略图对象，这里假设列表的第二个元素是缩略图
-                    thubmnailObject = objectList.get(1);
+                    thumbnailCiObject = objectList.get(1);
                 }
                 // 封装压缩图，返回结果
-                return buildResult(originFilename, compressedObject, thubmnailObject);
+                return buildResult(originFilename, compressedObject, thumbnailCiObject, imageInfo);
 
             }
             // 如果没有处理过的图片（即没有压缩图），直接返回上传的原始图片信息
@@ -128,10 +128,11 @@ public abstract class PictureUploadTemplate {
      * 构建返回结果
      * @param originFilename 原始文件名
      * @param compressedObject 压缩图对象
-     * @param thubmnailObject 缩略图对象
+     * @param thumbnailCiObject 缩略图对象
+     * @param imageInfo 图片基本信息
      * @return
      */
-    private UploadPictureResult buildResult(String originFilename, CIObject compressedObject, CIObject thubmnailObject) {
+    private UploadPictureResult buildResult(String originFilename, CIObject compressedObject, CIObject thumbnailCiObject, ImageInfo imageInfo) {
         // 封装返回结果
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         int picWidth = compressedObject.getWidth();
@@ -148,7 +149,9 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(compressedObject.getFormat());
         // 设置缩略图路径
-        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" +thubmnailObject.getKey());
+        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" +thumbnailCiObject.getKey());
+        // 设置图片主色调
+        uploadPictureResult.setPicColor(imageInfo.getAve());
 
         return uploadPictureResult;
     }
@@ -176,6 +179,8 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(imageInfo.getFormat());
+        // 设置颜色的主色调 #000
+        uploadPictureResult.setPicColor(imageInfo.getAve());
 
         return uploadPictureResult;
     }

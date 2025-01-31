@@ -2,6 +2,10 @@ package com.wjp.wcloudatlasbackend.model.dto.file;
 
 import lombok.Data;
 
+/**
+ * 图片上传结果对象
+ * @author wjp
+ */
 @Data
 public class UploadPictureResult {  
   
@@ -43,6 +47,11 @@ public class UploadPictureResult {
     /**  
      * 图片格式  
      */  
-    private String picFormat;  
-  
+    private String picFormat;
+
+
+    /**
+     * 图片主色调
+     */
+    private String picColor;
 }
