@@ -11,6 +11,8 @@ import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
 import com.wjp.wcloudatlasbackend.annotation.AuthCheck;
+import com.wjp.wcloudatlasbackend.api.imagesearch.ImageSearchApiFacade;
+import com.wjp.wcloudatlasbackend.api.imagesearch.model.ImageSearchResult;
 import com.wjp.wcloudatlasbackend.common.BaseResponse;
 import com.wjp.wcloudatlasbackend.common.DeleteRequest;
 import com.wjp.wcloudatlasbackend.common.ResultUtils;
@@ -648,5 +650,24 @@ public class PictureController {
 
         return ResultUtils.success(spaceLevelList);
     }
+
+
+    /**
+     * 以图搜图
+     * @return
+     */
+    @PostMapping("/search/picture")
+    public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest) {
+        // 校验参数
+        ThrowUtils.throwIf(searchPictureByPictureRequest == null , ErrorCode.PARAMS_ERROR, "参数为空");
+        Long pictureId = searchPictureByPictureRequest.getPictureId();
+        ThrowUtils.throwIf(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR, "图片ID为空");
+        Picture picture = pictureService.getById(pictureId);
+        ThrowUtils.throwIf(picture == null , ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        // 调用图搜图接口
+        List<ImageSearchResult> imageSearchResults = ImageSearchApiFacade.searchImage(picture.getThumbnailUrl());
+        return ResultUtils.success(imageSearchResults);
+    }
+
 
 }
