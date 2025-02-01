@@ -230,7 +230,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         // 开启事务
         Long finalSpaceId = spaceId;
-
+        Picture oldPicture = this.getById(pictureId);
             transactionTemplate.execute(status -> {
                 boolean result = this.saveOrUpdate(picture);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
@@ -249,9 +249,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
 
 
-        // todo 如果是更新，可清理cos中的图片资源
+//        // todo 如果是更新，可清理cos中的图片资源
+        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
         if(pictureId != null) {
-            this.clearPictureFile(picture);
+            // 删除的是数据库中要被替换的图片
+            this.clearPictureFile(oldPicture);
         }
 
         return PictureVO.objToVo(picture);
