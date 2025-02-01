@@ -692,4 +692,28 @@ public class PictureController {
     }
 
 
+    /**
+     * 批量编辑图片信息（普通用户）
+     * @param pictureEditByBatchRequest 图片编辑请求
+     * @param request 请求
+     * @return 成功或失败
+     */
+    @PostMapping("/edit/batch")
+    public BaseResponse<Boolean> editPictureByBatch(@RequestBody PictureEditByBatchRequest pictureEditByBatchRequest, HttpServletRequest request) {
+
+        if(pictureEditByBatchRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        ThrowUtils.throwIf(userId == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
+        // 编辑图片信息
+        pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
+
+        return ResultUtils.success(true);
+    }
+
+
 }
