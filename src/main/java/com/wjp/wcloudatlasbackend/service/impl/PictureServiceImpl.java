@@ -13,6 +13,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.wjp.wcloudatlasbackend.api.aliyunai.AliYunAiApi;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
@@ -84,11 +87,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private AliYunAiApi aliYunAiApi;
     /**
      * 事务模板
      */
     @Resource
     private TransactionTemplate transactionTemplate;
+
 
     /**
      * 上传图片
@@ -250,11 +256,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
 
 //        // todo 如果是更新，可清理cos中的图片资源
-        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-        if(pictureId != null) {
-            // 删除的是数据库中要被替换的图片
-            this.clearPictureFile(oldPicture);
-        }
+//        ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+//        if(pictureId != null) {
+//            // 删除的是数据库中要被替换的图片
+//            this.clearPictureFile(oldPicture);
+//        }
 
         return PictureVO.objToVo(picture);
 
@@ -966,6 +972,36 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 5. 操作数据库进行批量更新
         boolean result = this.updateBatchById(pictureList);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "批量编辑失败");
+    }
+
+    /**
+     * 创建AI扩图任务
+     * @param createPictureOutPaintingTaskRequest 创建请求
+     * @param loginUser 登录用户
+     */
+    @Override
+    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
+        // 1. 获取图片信息
+        Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
+        Picture picture = Optional.ofNullable(this.getById(pictureId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
+
+        // 2. 校验权限
+        checkPictureAuth(loginUser, picture);
+
+        // 3. 创建扩图任务
+        CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
+        CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
+        input.setImageUrl(picture.getUrl());
+        createOutPaintingTaskRequest.setInput(input);
+        createOutPaintingTaskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
+
+        // 4. 创建任务
+        return aliYunAiApi.createOutPaintingTask(createOutPaintingTaskRequest);
+
+
+
+
     }
 
     /**

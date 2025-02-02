@@ -12,6 +12,9 @@ import com.qcloud.cos.model.COSObject;
 import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
 import com.wjp.wcloudatlasbackend.annotation.AuthCheck;
+import com.wjp.wcloudatlasbackend.api.aliyunai.AliYunAiApi;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.wjp.wcloudatlasbackend.api.imagesearch.ImageSearchApiFacade;
 import com.wjp.wcloudatlasbackend.api.imagesearch.model.ImageSearchResult;
 import com.wjp.wcloudatlasbackend.common.BaseResponse;
@@ -99,6 +102,9 @@ public class PictureController {
 
     @Resource
     private SpaceService spaceService;
+
+    @Resource
+    private AliYunAiApi aliYunAiApi;
 
 
     /**
@@ -713,6 +719,42 @@ public class PictureController {
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
 
         return ResultUtils.success(true);
+    }
+
+
+    /**
+     * 创建AI扩图任务
+     * @param createPictureOutPaintingTaskRequest AI扩图请求
+     * @param request 请求
+     * @return 成功或失败
+     */
+    @PostMapping("/out_painting/create_task")
+    public BaseResponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(@RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, HttpServletRequest request) {
+        if(createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        ThrowUtils.throwIf(userId == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
+        // 创建AI扩图任务
+        CreateOutPaintingTaskResponse pictureOutPaintingTask = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
+
+        return ResultUtils.success(pictureOutPaintingTask);
+    }
+
+
+    /**
+     * 查询AI扩图任务
+     * @param taskId
+     * @return
+     */
+    @GetMapping("/out_painting/get_task")
+    public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
+        ThrowUtils.throwIf(taskId == null, ErrorCode.PARAMS_ERROR, "参数为空");
+        GetOutPaintingTaskResponse task = aliYunAiApi.getOutPaintingTask(taskId);
+        return ResultUtils.success(task);
     }
 
 
