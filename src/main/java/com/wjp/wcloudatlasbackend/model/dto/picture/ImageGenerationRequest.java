@@ -3,22 +3,17 @@ package com.wjp.wcloudatlasbackend.model.dto.picture;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
 import lombok.Data;
 
-import java.io.Serializable;
-import java.util.List;
-
 /**
- * AI 扩图服务请求参数
+ * 图配文模型 服务请求参数
  * @author wjp
  */
 @Data
-public class CreatePictureOutPaintingTaskRequest implements Serializable {
+public class ImageGenerationRequest {
 
     /**
      * 图片 id
      */
     private Long pictureId;
-
-//    private List<String> title;
 
     /**
      * 扩图参数

@@ -11,9 +11,10 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.repository.AbstractRepository;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.wjp.wcloudatlasbackend.api.aliyunai.AliYunAiApi;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskRequest;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskResponse;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
@@ -40,7 +41,6 @@ import com.wjp.wcloudatlasbackend.service.UserService;
 import com.wjp.wcloudatlasbackend.utils.ColorSimilarUtils;
 import com.wjp.wcloudatlasbackend.utils.ColorTransformUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.util.descriptor.web.JspPropertyGroup;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -998,10 +998,36 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         // 4. 创建任务
         return aliYunAiApi.createOutPaintingTask(createOutPaintingTaskRequest);
+    }
 
 
+    /**
+     * 创建图配文模型任务
+     * @param createPictureImageSynthesisTaskRequest 创建请求
+     * @param loginUser 登录用户
+     */
+    @Override
+    public CreateImageSynthesisTaskResponse createPictureImageSynthesisTask(CreatePictureImageSynthesisTaskRequest createPictureImageSynthesisTaskRequest, User loginUser) {
+        // 1. 参数校验
+        ThrowUtils.throwIf(createPictureImageSynthesisTaskRequest == null, ErrorCode.PARAMS_ERROR, "参数为空");
+        ThrowUtils.throwIf(loginUser == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
+        Picture picture = this.getById(createPictureImageSynthesisTaskRequest.getPictureId());
+        // 2. 校验权限
+        checkPictureAuth(loginUser, picture);
+
+        // 3. 创建图配文任务
+        CreateImageSynthesisTaskRequest createImageSynthesisTaskRequest = new CreateImageSynthesisTaskRequest();
+        CreateImageSynthesisTaskRequest.Input input = new CreateImageSynthesisTaskRequest.Input();
+
+        input.setImageUrl(picture.getUrl());
+        input.setTitle(createPictureImageSynthesisTaskRequest.getTitle());
+        createImageSynthesisTaskRequest.setInput(input);
+        createImageSynthesisTaskRequest.setParameters(createPictureImageSynthesisTaskRequest.getParameters());
 
 
+        // 4. 创建任务
+        return aliYunAiApi.createOutPaintingImageSynthesisTask(createImageSynthesisTaskRequest);
     }
 
     /**

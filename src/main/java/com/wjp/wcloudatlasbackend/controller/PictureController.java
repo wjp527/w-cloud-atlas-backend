@@ -13,7 +13,9 @@ import com.qcloud.cos.model.COSObjectInputStream;
 import com.qcloud.cos.utils.IOUtils;
 import com.wjp.wcloudatlasbackend.annotation.AuthCheck;
 import com.wjp.wcloudatlasbackend.api.aliyunai.AliYunAiApi;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskResponse;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.GetOutPaintingImageSynthesisTask;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.wjp.wcloudatlasbackend.api.imagesearch.ImageSearchApiFacade;
 import com.wjp.wcloudatlasbackend.api.imagesearch.model.ImageSearchResult;
@@ -746,6 +748,29 @@ public class PictureController {
 
 
     /**
+     * 创建图配文任务
+     * @param createPictureOutPaintingTaskRequest 图配文请求
+     * @param request 请求
+     * @return 成功或失败
+     */
+    @PostMapping("/image_synthesis/create_task")
+    public BaseResponse<CreateImageSynthesisTaskResponse> createPictureImageSynthesisTask(@RequestBody CreatePictureImageSynthesisTaskRequest createPictureOutPaintingTaskRequest, HttpServletRequest request) {
+        if(createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
+        }
+
+        User loginUser = userService.getLoginUser(request);
+        Long userId = loginUser.getId();
+        ThrowUtils.throwIf(userId == null, ErrorCode.NOT_LOGIN_ERROR, "未登录");
+
+        // 创建图配文任务
+        CreateImageSynthesisTaskResponse pictureImageSynthesisTask = pictureService.createPictureImageSynthesisTask(createPictureOutPaintingTaskRequest, loginUser);
+
+        return ResultUtils.success(pictureImageSynthesisTask);
+    }
+
+
+    /**
      * 查询AI扩图任务
      * @param taskId
      * @return
@@ -754,6 +779,18 @@ public class PictureController {
     public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
         ThrowUtils.throwIf(taskId == null, ErrorCode.PARAMS_ERROR, "参数为空");
         GetOutPaintingTaskResponse task = aliYunAiApi.getOutPaintingTask(taskId);
+        return ResultUtils.success(task);
+    }
+
+    /**
+     * 查询AI图配文任务
+     * @param taskId
+     * @return
+     */
+    @GetMapping("/image_synthesis/get_task")
+    public BaseResponse<GetOutPaintingImageSynthesisTask> getPictureImageSynthesisTask(String taskId) {
+        ThrowUtils.throwIf(taskId == null, ErrorCode.PARAMS_ERROR, "参数为空");
+        GetOutPaintingImageSynthesisTask task = aliYunAiApi.getOutPaintingImageSynthesisTask(taskId);
         return ResultUtils.success(task);
     }
 

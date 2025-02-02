@@ -6,9 +6,7 @@ import cn.hutool.http.Header;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONUtil;
-import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
-import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
-import com.wjp.wcloudatlasbackend.api.aliyunai.model.GetOutPaintingTaskResponse;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.*;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
@@ -114,4 +112,80 @@ public class AliYunAiApi {
             return JSONUtil.toBean(httpResponse.body(), GetOutPaintingTaskResponse.class);
         }
     }
+
+
+    // ----------------------------------------------------- 图配文模型API --------------------------------------------------------------------
+    // 创建任务 请求
+    // https://dashscope.aliyuncs.com/api/v1/services/aigc/image2image/out-painting
+    public static final String CREATE_OUT_PAINTING_IMAGE_SYNTHESIS_TASK_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis";
+
+
+    /**
+     * 创建图配文模型任务
+     * @param createImageSynthesisTaskRequest 创建任务请求
+     * @return  创建任务响应
+     */
+    public CreateImageSynthesisTaskResponse createOutPaintingImageSynthesisTask(CreateImageSynthesisTaskRequest createImageSynthesisTaskRequest) {
+        ThrowUtils.throwIf(createImageSynthesisTaskRequest == null, ErrorCode.OPERATION_ERROR, "AI 图配文模型失败");
+        // 发起请求
+        HttpRequest httpRequest = HttpRequest.post(CREATE_OUT_PAINTING_IMAGE_SYNTHESIS_TASK_URL)
+                .header("Authorization", "Bearer " + apiKey)
+                // 必须开启异步处理
+               .header("X-DashScope-Async", "enable")
+                .header("Content-Type", "application/json")
+               .body(JSONUtil.toJsonStr(createImageSynthesisTaskRequest));
+
+        // 处理异常
+        // 自动管理需要关闭的资源(如文件流、网络连接等)
+        try(HttpResponse httpResponse = httpRequest.execute()) {
+            if(!httpResponse.isOk()) {
+                log.error("请求异常: {}", httpResponse.body());
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "AI 图配文模型失败");
+            }
+
+            // 解析响应
+            CreateImageSynthesisTaskResponse response = JSONUtil.toBean(httpResponse.body(), CreateImageSynthesisTaskResponse.class);
+            // 解析错误信息
+            String errorCode = response.getCode();
+            if(StrUtil.isNotBlank(errorCode)) {
+                String errorMessage = response.getMessage();
+                log.error("请求异常: {}", errorMessage);
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "AI 图配文模型失败: " + errorMessage);
+            }
+
+            return response;
+        }
+    }
+
+
+    /**
+     * 查询任务状态结果
+     * @param taskId 任务 ID
+     * @return  任务响应
+     */
+    public GetOutPaintingImageSynthesisTask getOutPaintingImageSynthesisTask(String taskId) {
+        ThrowUtils.throwIf(taskId == null, ErrorCode.OPERATION_ERROR, "任务 ID 不能为空");
+        // 发起请求
+        // curl --location --request GET 'https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}' \
+        //--header "Authorization: Bearer $DASHSCOPE_API_KEY"
+        HttpRequest httpRequest = HttpRequest.get(String.format(GET_OUT_PAINTING_TASK_URL, taskId))
+                .header("Authorization", "Bearer " + apiKey)
+                // 不设置，AI扩图的时候会报SSL连接错误
+                .setSSLProtocol("TLSv1.2");
+
+        // 处理异常
+        String url = String.format(GET_OUT_PAINTING_TASK_URL, taskId);
+        try (HttpResponse httpResponse = httpRequest.get(url)
+                .header("Authorization", "Bearer " + apiKey)
+                .execute()) {
+            if (!httpResponse.isOk()) {
+                log.error("请求异常: {}", httpResponse.body());
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "获取任务结果失败");
+            }
+            return JSONUtil.toBean(httpResponse.body(), GetOutPaintingImageSynthesisTask.class);
+        }
+    }
+
+
+
 }

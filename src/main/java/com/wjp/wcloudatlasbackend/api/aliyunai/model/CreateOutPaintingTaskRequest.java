@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 创建扩图任务请求
@@ -15,8 +16,10 @@ public class CreateOutPaintingTaskRequest implements Serializable {
 
     /**
      * 模型，例如 "image-out-painting"
+     * AI扩图模型
      */
     private String model = "image-out-painting";
+//    private String model = "wanx-ast";
 
     /**
      * 输入图像信息
@@ -35,6 +38,7 @@ public class CreateOutPaintingTaskRequest implements Serializable {
          */
         @Alias("image_url")
         private String imageUrl;
+
     }
 
     @Data
@@ -109,5 +113,6 @@ public class CreateOutPaintingTaskRequest implements Serializable {
          */
         @Alias("add_watermark")
         private Boolean addWatermark = false;
+
     }
 }

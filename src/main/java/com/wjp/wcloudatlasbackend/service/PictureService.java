@@ -2,6 +2,7 @@ package com.wjp.wcloudatlasbackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskResponse;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.wjp.wcloudatlasbackend.model.dto.picture.*;
@@ -152,6 +153,13 @@ public interface PictureService extends IService<Picture> {
      */
     CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 
+
+    /**
+     * 创建图配文模型任务
+     * @param createPictureImageSynthesisTaskRequest 创建请求
+     * @param loginUser 登录用户
+     */
+    CreateImageSynthesisTaskResponse createPictureImageSynthesisTask(CreatePictureImageSynthesisTaskRequest createPictureImageSynthesisTaskRequest, User loginUser);
 
 
 }

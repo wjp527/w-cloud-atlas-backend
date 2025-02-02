@@ -1,6 +1,6 @@
 package com.wjp.wcloudatlasbackend.model.dto.picture;
 
-import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskRequest;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,19 +11,22 @@ import java.util.List;
  * @author wjp
  */
 @Data
-public class CreatePictureOutPaintingTaskRequest implements Serializable {
+public class CreatePictureImageSynthesisTaskRequest implements Serializable {
 
     /**
      * 图片 id
      */
     private Long pictureId;
 
-//    private List<String> title;
+    /**
+     * 给图片添加的标题
+     */
+    private List<String> title;
 
     /**
      * 扩图参数
      */
-    private CreateOutPaintingTaskRequest.Parameters parameters;
+    private CreateImageSynthesisTaskRequest.Parameters parameters;
 
     private static final long serialVersionUID = 1L;
 }
