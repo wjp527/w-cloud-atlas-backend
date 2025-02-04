@@ -7,6 +7,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.wjp.wcloudatlasbackend.constant.UserConstant;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
@@ -299,6 +300,19 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
     }
 
+    /**
+     * 校验空间权限
+     * @param loginUser 登录用户
+     * @param space 空间对象
+     */
+    @Override
+    public void checkSpaceAuth(User loginUser, Space space) {
+        // 权限校验
+        // 如果不是管理员并且也不是空间的本人，则校验不通过
+        if(!UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole()) && !loginUser.getId().equals(space.getUserId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限");
+        }
+    }
 
 
 }

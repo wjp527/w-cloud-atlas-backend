@@ -83,9 +83,7 @@ public class SpaceController {
         }
 
         // 仅本人和管理员可删除
-        if(!oldSpace.getUserId().equals(userId) || !userService.isAdmin(loginUser)) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限操作");
-        }
+        spaceService.checkSpaceAuth(loginUser, oldSpace);
 
         // 操作数据库
         boolean result = spaceService.removeById(id);
@@ -243,9 +241,7 @@ public class SpaceController {
         }
 
         // 只有 自己 和 管理员 才能修改
-        if(!oldSpace.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权更新");
-        }
+        spaceService.checkSpaceAuth(loginUser, space);
 
         // 操作数据库
         boolean result = spaceService.updateById(space);
