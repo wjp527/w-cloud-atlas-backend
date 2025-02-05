@@ -10,6 +10,7 @@ import com.wjp.wcloudatlasbackend.constant.UserConstant;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
+import com.wjp.wcloudatlasbackend.manager.auth.SpaceUserAuthManager;
 import com.wjp.wcloudatlasbackend.model.dto.space.SpaceAddRequest;
 import com.wjp.wcloudatlasbackend.model.dto.space.SpaceEditRequest;
 import com.wjp.wcloudatlasbackend.model.dto.space.SpaceQueryRequest;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
+import java.util.List;
 
 /**
  * 空间接口
@@ -40,6 +42,10 @@ public class SpaceController {
     private UserService userService;
     @Resource
     private SpaceService spaceService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
+
 
 
     /**
@@ -157,10 +163,15 @@ public class SpaceController {
     public BaseResponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR, "参数错误");
 
+        User loginUser = userService.getLoginUser(request);
         // 查询数据库
         Space space = spaceService.getById(id);
         // 转为 VO
         SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+
+        // 权限列表
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
 
         return ResultUtils.success(spaceVO);
 

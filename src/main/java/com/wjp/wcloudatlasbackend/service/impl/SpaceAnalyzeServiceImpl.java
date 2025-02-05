@@ -220,8 +220,6 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 .flatMap(tagsJson -> JSONUtil.toList(tagsJson, String.class).stream())
                 .collect(Collectors.groupingBy(tag -> tag, Collectors.counting()));
 
-        // 转换为响应对象，按照使用次数进行排序
-        System.out.println("===" + tagCountMap.entrySet());
         // tagCountMap.entrySet()
         // 将对象表示一个标签和其出现次数的键值对 [生活=2, 创意=1]
         List<SpaceTagAnalyzeResponse> spaceTagAnalyzeResponses = tagCountMap.entrySet().stream()

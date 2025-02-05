@@ -782,8 +782,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 return true;
             });
 
-            // 校验权限
-            this.checkPictureAuth(loginUser, oldPicture);
+            // 校验权限 已经改为 使用 注解鉴权
+            // this.checkPictureAuth(loginUser, oldPicture);
             // 删除 cos 中的图片
             this.clearPictureFile(oldPicture);
 
@@ -820,8 +820,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture oldPicture = this.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 
-        // 校验权限
-        this.checkPictureAuth(loginUser, oldPicture);
+        // 校验权限 已经改为 使用 注解鉴权
+        // this.checkPictureAuth(loginUser, oldPicture);
 
         // 操作数据库
         boolean result = this.updateById(picture);
@@ -987,7 +987,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "图片不存在"));
 
         // 2. 校验权限
-        checkPictureAuth(loginUser, picture);
+        // 已经改为 使用 注解鉴权
+        // checkPictureAuth(loginUser, picture);
 
         // 3. 创建扩图任务
         CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
@@ -1014,7 +1015,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         Picture picture = this.getById(createPictureImageSynthesisTaskRequest.getPictureId());
         // 2. 校验权限
-        checkPictureAuth(loginUser, picture);
+        // 已经改为 使用 注解鉴权
+        // checkPictureAuth(loginUser, picture);
 
         // 3. 创建图配文任务
         CreateImageSynthesisTaskRequest createImageSynthesisTaskRequest = new CreateImageSynthesisTaskRequest();

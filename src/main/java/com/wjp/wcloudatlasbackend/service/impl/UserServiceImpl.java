@@ -10,6 +10,7 @@ import com.wjp.wcloudatlasbackend.constant.UserConstant;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
+import com.wjp.wcloudatlasbackend.manager.auth.StpKit;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserRegisterRequest;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
@@ -119,6 +120,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // equest.getSession(): 获取当前请求的session对象
         // 将用户信息保存到session中
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
+
+        // 记录用户登录态到 Sa-token，使于空间鉴权时使用，注意保证该用户信息 与 SpringSession 中的信息过期时间一致
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
 
 
         LoginUserVO loginUserVO = getLoginUserVO(user);
