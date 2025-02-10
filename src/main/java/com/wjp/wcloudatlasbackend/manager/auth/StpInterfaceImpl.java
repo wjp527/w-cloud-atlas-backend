@@ -2,6 +2,7 @@ package com.wjp.wcloudatlasbackend.manager.auth;
 
 import cn.dev33.satoken.stp.StpInterface;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
@@ -72,6 +73,7 @@ public class StpInterfaceImpl implements StpInterface {
             return new ArrayList<>();
         }
         //2.管理员权限，表示权限校验通过
+        // 根据角色 获取 对应的权限列表
         List<String> ADMIN_PERMISSION = spaceUserAuthManager.getPermissionsByRole(SpaceRoleEnum.ADMIN.getValue());
 
         //3.获取上下文对象：从请求中获取 spaceuserauthcontext 上下文
@@ -146,10 +148,12 @@ public class StpInterfaceImpl implements StpInterface {
                 throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "未找到图片信息");
             }
 
+            // 获取图片的所属空间
             spaceId = picture.getSpaceId();
 
-            // 公共图库，仅本人后管理员可操作
+            // 公共图库，仅本人或管理员可操作
             if(spaceId == null) {
+                // 是图片的创建人 或 管理员 可以操作
                 if(picture.getUserId().equals(userId) || userService.isAdmin(loginUser)) {
                     return ADMIN_PERMISSION;
                 } else {
@@ -175,7 +179,7 @@ public class StpInterfaceImpl implements StpInterface {
             }
         } else {
             // 团队空间，查询 SpaceUser 并获取角色和权限
-            spaceUserService.lambdaQuery()
+            spaceUser = spaceUserService.lambdaQuery()
                     .eq(SpaceUser::getSpaceId, spaceId)
                     .eq(SpaceUser::getUserId, userId)
                     .one();
@@ -184,6 +188,7 @@ public class StpInterfaceImpl implements StpInterface {
                 return new ArrayList<>();
             }
 
+            // 根据角色后取权限列表
             return spaceUserAuthManager.getPermissionsByRole(spaceUser.getSpaceRole());
         }
     }
@@ -226,10 +231,10 @@ public class StpInterfaceImpl implements StpInterface {
         // 根据请求路径区分 id 字段的含义
         Long id = authRequest.getId();
 
-        if(ObjectUtil.isNotNull(id)) {
+        if(ObjUtil.isNotNull(id)) {
             // 根据请求路径区分模块名称
             String requestUri = request.getRequestURI();
-            // 截取请求路径 api/space/1 => space/1
+            // 截取请求路径 /api/space/1 => space/1
             String partUri = requestUri.replace(contextPath + "/", "");
             // 截取模块名称 space/1 => space
             String moduleName = StrUtil.subBefore(partUri, "/", false);

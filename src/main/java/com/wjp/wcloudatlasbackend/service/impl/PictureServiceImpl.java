@@ -118,10 +118,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             spaceId = pictureUploadRequest.getSpaceId();
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-            // 校验是否有空间的权限，仅空间管理员才能上传
-            if (!loginUser.getId().equals(space.getUserId())) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权上传图片");
-            }
+            // 改用统一的权限校验
+//            // 校验是否有空间的权限，仅空间管理员才能上传
+//            if (!loginUser.getId().equals(space.getUserId())) {
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权上传图片");
+//            }
 
             // 校验额度
             if (space.getTotalCount() >= space.getMaxCount()) {
@@ -139,11 +140,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
             Picture oldPicture = this.getById(pictureId);
             ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-
+// 使用统一的权限管理
             // 仅本人和管理员有权编辑图片
-            if(!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权更新");
-            }
+//            if(!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权更新");
+//            }
 
             // 校验空间是否一致
             // 没传 spaceId, 则复用原有图片的 spaceId（这样也兼容了公共图库）
@@ -240,14 +241,35 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             transactionTemplate.execute(status -> {
                 boolean result = this.saveOrUpdate(picture);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "图片上传失败");
+                // 更新空间的使用额度
                 if(finalSpaceId!=null) {
-                    // 更新空间的使用额度
-                    boolean update = spaceService.lambdaUpdate()
-                            .eq(Space::getId, finalSpaceId)
-                            .setSql("totalSize = totalSize + " + picture.getPicSize())
-                            .setSql("totalCount = totalCount + 1")
-                            .update();
-                    ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+                    // 新增的时候需要进行更新额度
+                    if(pictureUploadRequest.getId() == null) {
+                        // 更新空间的使用额度
+                        boolean update = spaceService.lambdaUpdate()
+                                .eq(Space::getId, finalSpaceId)
+                                .setSql("totalSize = totalSize + " + picture.getPicSize())
+                                .setSql("totalCount = totalCount + 1")
+                                .update();
+                        ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+                    } else {
+                        // 去掉原有图片的使用额度
+                        boolean update = spaceService.lambdaUpdate()
+                                .eq(Space::getId, finalSpaceId)
+                                .setSql("totalSize = totalSize - " + oldPicture.getPicSize())
+                                .setSql("totalCount = totalCount - 1")
+                                .update();
+                        ThrowUtils.throwIf(!update, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+
+                        // 对修改后的图片进行增加额度
+                        boolean update2 = spaceService.lambdaUpdate()
+                                .eq(Space::getId, finalSpaceId)
+                                .setSql("totalSize = totalSize + " + picture.getPicSize())
+                                .setSql("totalCount = totalCount + 1")
+                                .update();
+                        ThrowUtils.throwIf(!update2, ErrorCode.OPERATION_ERROR, "空间额度更新失败");
+
+                    }
                 }
                 return picture;
             });

@@ -117,14 +117,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
         // 4. 保存用户的登录状态
-        // equest.getSession(): 获取当前请求的session对象
+        // request.getSession(): 获取当前请求的session对象
         // 将用户信息保存到session中
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
 
         // 记录用户登录态到 Sa-token，使于空间鉴权时使用，注意保证该用户信息 与 SpringSession 中的信息过期时间一致
+        // 在当前会话进行 Space 账号登录
         StpKit.SPACE.login(user.getId());
+        // 获取当前 Space 会话的 Session 对象，并进行写值操作
         StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
-
 
         LoginUserVO loginUserVO = getLoginUserVO(user);
         return loginUserVO;

@@ -43,7 +43,7 @@ public class SpaceUserAuthManager {
     }
 
     /**
-     * 根据角色后去权限列表
+     * 根据角色后取权限列表
      * @param spaceUserRole 角色
      * @return 权限列表
      */
@@ -107,7 +107,7 @@ public class SpaceUserAuthManager {
                 // 团队空间，查询 SpaceUser 并获取角色和权限
                 SpaceUser spaceUser = spaceUserService.lambdaQuery()
                         .eq(SpaceUser::getSpaceId, space.getId())
-                        .eq(SpaceUser::getUserId, space.getUserId())
+                        .eq(SpaceUser::getUserId, loginUser.getId())
                         .one();
 
                 if(spaceUser == null) {

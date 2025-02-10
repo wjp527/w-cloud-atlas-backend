@@ -13,7 +13,7 @@ import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.model.dto.space.SpaceAddRequest;
 import com.wjp.wcloudatlasbackend.model.dto.space.SpaceQueryRequest;
-import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
+
 import com.wjp.wcloudatlasbackend.model.entity.domain.Space;
 import com.wjp.wcloudatlasbackend.model.entity.domain.SpaceUser;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
@@ -27,13 +27,14 @@ import com.wjp.wcloudatlasbackend.mapper.SpaceMapper;
 import com.wjp.wcloudatlasbackend.service.SpaceUserService;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Date;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,6 +60,11 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
      */
     @Resource
     private TransactionTemplate transactionTemplate;
+
+//    可选，为了后续好部署，注释掉分表
+//    @Resource
+//    @Lazy
+//    private DynamicShardingManager dynamicShardingManager;
     /**
      * 校验空间是否合法 【add = true 新增，false 修改】
      * @param space
@@ -296,6 +302,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                     ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "创建空间成员记录失败");
 
                 }
+
+                // 创建分表 （仅对团队空间生效）
+//                dynamicShardingManager.createSpacePictureTable(space);
 
                 // 返回 已创建好的私有空间id
                 return space.getId();

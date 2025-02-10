@@ -35,6 +35,44 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
+  # 空间图片分表
+  shardingsphere:
+    datasource:
+      names: w_cloud_atlas
+      w_cloud_atlas:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/w_cloud_atlas
+        username: root
+        password: 123456
+    rules:
+      sharding:
+        tables:
+          picture:
+            actual-data-nodes: w_cloud_atlas.picture  # 动态分表
+            # 分表策略
+            table-strategy:
+              # 标准分片算法
+              standard:
+                # 分片列
+                sharding-column: spaceId
+                # 分片算法名称
+                sharding-algorithm-name: picture_sharding_algorithm  # 使用自定义分片算法
+        # 分片算法
+        sharding-algorithms:
+          # 自定义分片算法
+          picture_sharding_algorithm:
+            # 类全路径
+            type: CLASS_BASED
+            # 类名
+            props:
+              # 自定义分片算法类全路径
+              strategy: standard
+              # 自定义分片算法类名
+              algorithmClassName: com.wjp.wcloudatlasbackend.manager.sharding.PictureShardingAlgorithm
+    # 打印 SQL 日志
+    props:
+      sql-show: true
 
 
 mybatis-plus:
@@ -44,6 +82,8 @@ mybatis-plus:
     # 仅在开发环境打印日志
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
+    # 运行时开启 sql 运行器
+    enable-sql-runner: true
     db-config:
       # 逻辑删除配置
       logic-delete-field: isDelete
@@ -51,6 +91,7 @@ mybatis-plus:
       logic-delete-value: 1
       # 逻辑未删除字段
       logic-not-delete-value: 0
+
 
 # 接口文档配置
 knife4j:

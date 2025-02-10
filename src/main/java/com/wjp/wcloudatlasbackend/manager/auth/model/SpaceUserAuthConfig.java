@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 权限配置类
+ * 空间权限配置类
  * @author wjp
  */
 @Data
