@@ -9,7 +9,7 @@ server:
 
 spring:
   application:
-    name: w-cloud-atlas-backend
+    name: w-cloud-atlas-backend-ddd
 
   # 数据库配置
   datasource:

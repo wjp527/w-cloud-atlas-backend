@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.wjp</groupId>
-    <artifactId>w-cloud-atlas-backend</artifactId>
+    <artifactId>w-cloud-atlas-backend-ddd</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>w-cloud-atlas-backend</name>
-    <description>w-cloud-atlas-backend</description>
+    <name>w-cloud-atlas-backend-ddd</name>
+    <description>w-cloud-atlas-backend-ddd</description>
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
