@@ -12,6 +12,9 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.qcloud.cos.COSClient;
+import com.qcloud.cos.http.HttpMethodName;
+import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.wjp.wcloudatlasbackend.api.aliyunai.AliYunAiApi;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskRequest;
 import com.wjp.wcloudatlasbackend.api.aliyunai.model.CreateImageSynthesisTaskResponse;
@@ -45,6 +48,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -54,6 +58,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.awt.*;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
@@ -83,6 +88,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private CosManager cosManage;
+
+    @Autowired
+    private COSClient cosClient;
 
     @Resource
     private SpaceService spaceService;
@@ -997,6 +1005,46 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     }
 
     /**
+     * 生成预签名 URL
+     * @param originalUrl 原始 COS URL（格式：https://{bucket}.cos.{region}.myqcloud.com/{key}）
+     * @return 预签名 URL
+     */
+    private String getPresignedUrl(String originalUrl) {
+        try {
+            // 解析原始 URL 获取 Bucket 和 Key
+            URI uri = URI.create(originalUrl);
+            String host = uri.getHost();
+            String path = uri.getPath();
+
+            // 验证 host 格式（防止恶意 URL）
+            if (!host.endsWith(".myqcloud.com")) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "非法的 COS URL");
+            }
+
+            // 提取 Bucket 名称（host 格式：{bucket}.cos.{region}.myqcloud.com）
+            String bucketName = host.substring(0, host.indexOf(".cos."));
+
+            // 提取对象 Key（去除路径开头的 /）
+            String key = path.startsWith("/") ? path.substring(1) : path;
+
+            // 创建预签名请求
+            GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(
+                    bucketName,
+                    key,
+                    HttpMethodName.GET);
+
+            // 设置过期时间（示例：1 小时）
+            Date expiration = new Date(System.currentTimeMillis() + 3600 * 1000);
+            request.setExpiration(expiration);
+
+            // 生成预签名 URL
+            return cosClient.generatePresignedUrl(request).toString();
+
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "生成预签名 URL 失败");
+        }
+    }
+    /**
      * 创建AI扩图任务
      * @param createPictureOutPaintingTaskRequest 创建请求
      * @param loginUser 登录用户
@@ -1012,10 +1060,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 已经改为 使用 注解鉴权
         // checkPictureAuth(loginUser, picture);
 
+        // 2. 获取预签名 URL
+        String presignedUrl = getPresignedUrl(picture.getUrl());
+
         // 3. 创建扩图任务
         CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
-        input.setImageUrl(picture.getUrl());
+        input.setImageUrl(presignedUrl);
         createOutPaintingTaskRequest.setInput(input);
         createOutPaintingTaskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
 
@@ -1040,11 +1091,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 已经改为 使用 注解鉴权
         // checkPictureAuth(loginUser, picture);
 
+        // 2. 获取预签名 URL
+        String presignedUrl = getPresignedUrl(picture.getUrl());
+
         // 3. 创建图配文任务
         CreateImageSynthesisTaskRequest createImageSynthesisTaskRequest = new CreateImageSynthesisTaskRequest();
         CreateImageSynthesisTaskRequest.Input input = new CreateImageSynthesisTaskRequest.Input();
 
-        input.setImageUrl(picture.getUrl());
+        input.setImageUrl(presignedUrl);
         input.setTitle(createPictureImageSynthesisTaskRequest.getTitle());
         createImageSynthesisTaskRequest.setInput(input);
         createImageSynthesisTaskRequest.setParameters(createPictureImageSynthesisTaskRequest.getParameters());
