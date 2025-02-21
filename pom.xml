@@ -199,7 +199,8 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.wjp.wcloudatlasbackend.WCloudAtlasBackendApplication</mainClass>
-                    <skip>true</skip>
+                    <!-- 一✨定要将这句话干掉,因为他会默认忽略主类的打包 -->
+<!--                    <skip>true</skip>-->
                 </configuration>
                 <executions>
                     <execution>

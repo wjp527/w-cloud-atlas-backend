@@ -90,6 +90,9 @@ public class PictureController {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private ImageSearchApiFacade imageSearchApiFacade;
+
     /**
      * 构造本地缓存 (Caffeine)
      */
@@ -711,7 +714,7 @@ public class PictureController {
         Picture picture = pictureService.getById(pictureId);
         ThrowUtils.throwIf(picture == null , ErrorCode.NOT_FOUND_ERROR, "图片不存在");
         // 调用图搜图接口
-        List<ImageSearchResult> imageSearchResults = ImageSearchApiFacade.searchImage(picture.getThumbnailUrl());
+        List<ImageSearchResult> imageSearchResults = imageSearchApiFacade.searchImage(picture.getName());
         return ResultUtils.success(imageSearchResults);
     }
 
