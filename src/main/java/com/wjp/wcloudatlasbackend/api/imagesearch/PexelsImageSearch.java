@@ -27,20 +27,20 @@ import java.util.List;
 @Component
 public class PexelsImageSearch {
 
-    @Value("${pexels.apiKey}")
-    private String apiKey;
+    //    @Value("${pexels.apiKey}")
+    private String apiKey = "C9m9JLDjur1ZhU54YzjPq9phhGAGyS0HccpASJINSDSh39x6JOepnHJh";
 
-    @Value("${pexels.apiUrl}")
-    private String ENDPOINT;
+    //    @Value("${pexels.apiUrl}")
+    private String ENDPOINT = "https://api.pexels.com/v1/search";
 
-    @Value("${baidu.baiduAppId}")
-    private String BAIDU_APP_ID;
+    //    @Value("${baidu.baiduAppId}")
+    private String BAIDU_APP_ID = "20221031001427402";
 
-    @Value("${baidu.baiduApiKey}")
-    private String BAIDU_API_KEY;
+    //    @Value("${baidu.baiduApiKey}")
+    private String BAIDU_API_KEY = "jDXh4zjeW8HUBVsNXn7y";
 
-    @Value("${baidu.baiduTranslationUrl}")
-    private String BAIDU_TRANSLATE_ENDPOINT;
+    //    @Value("${baidu.baiduTranslationUrl}")
+    private String BAIDU_TRANSLATE_ENDPOINT = "https://fanyi-api.baidu.com/api/trans/vip/translate";
 
     private static final int DEFAULT_PAGE_SIZE = 20;
 

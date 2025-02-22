@@ -6,6 +6,7 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wjp.wcloudatlasbackend.constant.UserConstant;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
@@ -13,6 +14,7 @@ import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
 import com.wjp.wcloudatlasbackend.manager.auth.StpKit;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserRegisterRequest;
+import com.wjp.wcloudatlasbackend.model.dto.user.VipCode;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
 import com.wjp.wcloudatlasbackend.model.enums.UserRoleEnum;
 import com.wjp.wcloudatlasbackend.model.vo.user.LoginUserVO;
@@ -24,8 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -280,6 +283,111 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return user != null && UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
 
     }
+
+
+    // region  会员相关业务实现
+    private static final String VIP_CODE_FILE_PATH = "src/main/resources/biz/vipCode.json";
+
+    /**
+     * 用户兑换会员 (会员码兑换)
+     * @param user 用户
+     * @param vipCode 会员码
+     * @return 是否兑换成功
+     */
+    @Override
+    public boolean exchangeVip(User user, String vipCode) {
+
+        // 1. 参数校验
+        if(user == null || vipCode == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数错误");
+        }
+
+        User loginUser = this.getById(user.getId());
+        if(loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+        }
+
+        // 如果已经是会员就无需兑换
+        if(loginUser.getUserRole().equals(UserConstant.VIP_ROLE)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已经是会员");
+        }
+
+        // 2. 读取 VIP 会员码文件并进行校验
+        List<VipCode> vipCodes = loadVipCodes();
+
+        Optional<VipCode> vipCodeOpt = vipCodes.stream()
+                .filter(code -> code.getCode().equals(vipCode) && !code.isHasUsed())
+                .findFirst();
+
+        // 校验会员码是否有效
+        if (!vipCodeOpt.isPresent()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "会员码无效或已被使用");
+        }
+
+        // 获取到未使用的会员码
+        VipCode validVipCode = vipCodeOpt.get();
+
+        // 3. 兑换会员：更新用户信息
+        loginUser.setUserRole(UserConstant.VIP_ROLE);
+        loginUser.setVipCode(vipCode);
+        loginUser.setVipExpireTime(calculateVipExpireTime());
+
+
+        loginUser.setVipNumber(generateVipNumber());
+
+        // 更新数据库
+        boolean result = this.updateById(loginUser);
+
+        if(!result) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "兑换会员失败");
+        }
+
+        // 4. 标记会员码为已使用
+        validVipCode.setHasUsed(true);
+
+        // 将更新后的 vipCode 数据写回文件
+        saveVipCodes(vipCodes);
+
+        return true;
+    }
+
+    // 读取会员码 JSON 文件
+    private List<VipCode> loadVipCodes() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            // 读取 JSON 文件并转为对象
+            return objectMapper.readValue(new File(VIP_CODE_FILE_PATH),
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, VipCode.class));
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "加载会员码失败");
+        }
+    }
+
+    // 保存更新后的会员码信息到文件
+    private void saveVipCodes(List<VipCode> vipCodes) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            // 将会员码列表写回 JSON 文件
+            objectMapper.writeValue(new File(VIP_CODE_FILE_PATH), vipCodes);
+        } catch (IOException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "保存会员码失败");
+        }
+    }
+
+    // 计算会员过期时间（假设会员有效期为 1 年）
+    private Date calculateVipExpireTime() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.YEAR, 1); // 会员有效期为1年
+        return calendar.getTime();
+    }
+
+    // 随机生成会员编号
+    private Integer generateVipNumber() {
+        Random random = new Random();
+        return random.nextInt(1000000);
+    }
+
+    // endregion
 }
 
 

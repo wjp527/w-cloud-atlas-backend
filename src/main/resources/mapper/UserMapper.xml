@@ -15,6 +15,9 @@
             <result property="userRole" column="userRole" jdbcType="VARCHAR"/>
             <result property="shareCode" column="shareCode" jdbcType="VARCHAR"/>
             <result property="inviteUser" column="inviteUser" jdbcType="BIGINT"/>
+            <result property="vipExpireTime" column="vipExpireTime" jdbcType="TIMESTAMP"/>
+            <result property="vipCode" column="vipCode" jdbcType="VARCHAR"/>
+            <result property="vipNumber" column="vipNumber" jdbcType="INTEGER"/>
             <result property="editTime" column="editTime" jdbcType="TIMESTAMP"/>
             <result property="createTime" column="createTime" jdbcType="TIMESTAMP"/>
             <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
@@ -25,7 +28,8 @@
         id,userAccount,userPassword,
         userName,userAvatar,userProfile,
         userTags,userRole,shareCode,
-        inviteUser,editTime,createTime,
+        inviteUser,vipExpireTime,vipCode,vipNumber,
+        editTime,createTime,
         updateTime,isDelete
     </sql>
 </mapper>

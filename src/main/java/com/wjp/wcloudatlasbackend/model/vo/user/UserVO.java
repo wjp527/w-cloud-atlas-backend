@@ -43,6 +43,21 @@ public class UserVO implements Serializable {
     private String userRole;
 
     /**
+     * vip 到期时间
+     */
+    private Date vipExpireTime;
+
+    /**
+     * vip 兑换码
+     */
+    private String vipCode;
+
+    /**
+     * vip 编号
+     */
+    private Integer vipNumber;
+
+    /**
      * 创建时间
      */
     private Date createTime;

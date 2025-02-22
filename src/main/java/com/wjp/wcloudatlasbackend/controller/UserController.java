@@ -236,4 +236,33 @@ public class UserController {
 
     }
 
+    /**
+     * 会员码兑换接口
+     * @param vipExchangeRequest 会员兑换请求
+     * @return 兑换结果
+     */
+    @PostMapping("/exchangeVip")
+    public BaseResponse<String> exchangeVip(@RequestBody VipExchangeRequest vipExchangeRequest, HttpServletRequest request) {
+//        try {
+            // 调用service层进行会员兑换
+            String vipCode = vipExchangeRequest.getVipCode();
+            User user = userService.getLoginUser(request);
+
+            if(user == null) {
+                throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+            }
+
+            userService.exchangeVip(user, vipCode);
+            // 如果成功返回成功的响应
+            BaseResponse<String> success = ResultUtils.success("会员兑换成功！");
+            return success;
+//        } catch (BusinessException e) {
+//            // 处理业务异常，如会员码无效或已使用等
+//            throw new BusinessException(ErrorCode.PAeRAMS_ERROR, "会员码无效或已使用！");
+//        } catch (Exception e) {
+//            // 处理其他异常
+//            throw new BusinessException(ErrorCode.OPERATION_ERROR, "会员兑换失败！");
+//        }
+    }
+
 }

@@ -59,6 +59,22 @@ public class User implements Serializable {
      */
     private String shareCode;
 
+
+    /**
+     * vip 到期时间
+     */
+    private Date vipExpireTime;
+
+    /**
+     * vip 兑换码
+     */
+    private String vipCode;
+
+    /**
+     * vip 编号
+     */
+    private Integer vipNumber;
+
     /**
      * 邀请用户 id
      */
