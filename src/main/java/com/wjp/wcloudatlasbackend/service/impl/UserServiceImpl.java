@@ -7,24 +7,38 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qcloud.cos.model.PutObjectResult;
+import com.wjp.wcloudatlasbackend.common.ResultUtils;
 import com.wjp.wcloudatlasbackend.constant.UserConstant;
 import com.wjp.wcloudatlasbackend.exception.BusinessException;
 import com.wjp.wcloudatlasbackend.exception.ErrorCode;
 import com.wjp.wcloudatlasbackend.exception.ThrowUtils;
+import com.wjp.wcloudatlasbackend.manager.CosManager;
 import com.wjp.wcloudatlasbackend.manager.auth.StpKit;
+import com.wjp.wcloudatlasbackend.manager.upload.FilePictureUpload;
+import com.wjp.wcloudatlasbackend.manager.upload.PictureUploadTemplate;
+import com.wjp.wcloudatlasbackend.model.dto.file.UploadPictureResult;
+import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserRegisterRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.VipCode;
+import com.wjp.wcloudatlasbackend.model.entity.domain.Picture;
+import com.wjp.wcloudatlasbackend.model.entity.domain.Space;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
 import com.wjp.wcloudatlasbackend.model.enums.UserRoleEnum;
+import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import com.wjp.wcloudatlasbackend.model.vo.user.LoginUserVO;
 import com.wjp.wcloudatlasbackend.model.vo.user.UserVO;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import com.wjp.wcloudatlasbackend.mapper.UserMapper;
+import com.wjp.wcloudatlasbackend.utils.ColorTransformUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
@@ -43,6 +57,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     // 用于加密数据
     private final String SLAT = "wjp";
+
+    @Resource
+    private CosManager cosManger;
 
     /**
      * 用户注册
@@ -388,6 +405,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     // endregion
+
+
+
+    /**
+     * 上传图片
+     * @param multipartFile  图片文件
+     * @param loginUser 登录用户
+     * @return 返回 PictureVO
+     */
+    @Value("${cos.client.host}")
+    private String cosHost;
+    @Override
+    public String userUploadFile(MultipartFile multipartFile, User loginUser) {
+        // 文件目录
+        String filename = multipartFile.getOriginalFilename();
+        // filepath 怎么获取到该图片的完整路径
+        String filepath = String.format("/user/%s/%s", loginUser.getId(), filename);
+        File file = null;
+        try {
+            // 上传文件
+            // 创建临时文件
+            file = File.createTempFile(filepath, null);
+            // 保存文件到临时文件(就是将用户传来的图片资源保存到file里面)
+            multipartFile.transferTo(file);
+            // 上传到Cos
+            cosManger.putObject(filepath, file);
+            // 返回可访问的地址
+            return cosHost + "/" + filepath;
+        } catch(Exception e) {
+            log.error("file upload error, filepath = " + filepath, e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "上传失败");
+        } finally {
+            // 删除临时文件
+            if(file != null) {
+                boolean delete = file.delete();
+                if(!delete) {
+                    log.error("delete temp file error, filepath = " + filepath);
+                }
+            }
+        }
+
+    }
 }
 
 

@@ -18,6 +18,7 @@ import com.wjp.wcloudatlasbackend.model.vo.user.LoginUserVO;
 import com.wjp.wcloudatlasbackend.model.vo.user.UserVO;
 import com.wjp.wcloudatlasbackend.service.UserService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -190,7 +191,7 @@ public class UserController {
      * @return
      */
     @PostMapping("/update")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+//    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
         // 校验参数
         if(userUpdateRequest == null || userUpdateRequest.getId() == null) {
@@ -264,5 +265,18 @@ public class UserController {
 //            throw new BusinessException(ErrorCode.OPERATION_ERROR, "会员兑换失败！");
 //        }
     }
-
+    /**
+     * 测试上传文件
+     * @param multipartFile 文件
+     * @RequestPart("file"): 上传的文件参数名称
+     */
+    @PostMapping("/upload")
+    public BaseResponse<String> userUploadFile(@RequestPart("file") MultipartFile multipartFile, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        if(loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR, "用户未登录");
+        }
+        String s = userService.userUploadFile(multipartFile, loginUser);
+        return ResultUtils.success(s);
+    }
 }

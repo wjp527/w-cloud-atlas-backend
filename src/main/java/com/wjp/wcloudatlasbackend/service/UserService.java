@@ -1,12 +1,15 @@
 package com.wjp.wcloudatlasbackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.wjp.wcloudatlasbackend.model.dto.picture.PictureUploadRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserQueryRequest;
 import com.wjp.wcloudatlasbackend.model.dto.user.UserRegisterRequest;
 import com.wjp.wcloudatlasbackend.model.entity.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.wjp.wcloudatlasbackend.model.vo.picture.PictureVO;
 import com.wjp.wcloudatlasbackend.model.vo.user.LoginUserVO;
 import com.wjp.wcloudatlasbackend.model.vo.user.UserVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -104,4 +107,12 @@ public interface UserService extends IService<User> {
      */
     boolean exchangeVip(User user, String vipCode);
 
+
+    /**
+     * 上传图片
+     * @param multipartFile 图片文件
+     * @param loginUser 登录用户
+     * @return 上传成功的图片信息
+     */
+    String userUploadFile(MultipartFile multipartFile, User loginUser);
 }
